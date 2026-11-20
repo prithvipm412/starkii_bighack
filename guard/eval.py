@@ -1,5 +1,12 @@
-"""Run python -m guard.eval with the cached models and local Git history."""
+"""Run python -m guard.eval [--testset PATH] with the cached models and local Git history.
+
+The test set holds prompt text, so it is kept OUTSIDE the repo. Path: --testset, else the
+GUARD_TESTSET env var, else ~/Desktop/guard_testset.jsonl. JSONL rows: {"id", "variant", "harmful", "text"}.
+"""
+import argparse
 import json
+import os
+import sys
 from pathlib import Path
 from statistics import median
 import subprocess
@@ -43,8 +50,19 @@ def calibrate(rows, scores):
     return max(candidates, key=lambda c: (c[1], -c[2], -abs(c[0] - 0.5)))
 
 
+def testset_path(arg=None):
+    return Path(arg or os.environ.get("GUARD_TESTSET") or Path.home() / "Desktop" / "guard_testset.jsonl")
+
+
 def main():
-    rows = [json.loads(line) for line in (ROOT / "guard/testset.jsonl").read_text().splitlines()]
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--testset", help="JSONL test set (outside the repo); default $GUARD_TESTSET")
+    args = ap.parse_args()
+    path = testset_path(args.testset)
+    try:
+        rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
+    except (OSError, ValueError) as e:
+        sys.exit(f"ERROR: cannot read test set {path}: {e} (set --testset or GUARD_TESTSET)")
     guard = LanguageBarrierGuard()
     old, old_module = old_guard()
     old._guard = guard.guard

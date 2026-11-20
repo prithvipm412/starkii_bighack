@@ -9,3 +9,7 @@ data_tools/output/
 *.pt
 .DS_Store
 node_modules/
+
+# prompt text never in git (guard test sets live outside the repo)
+guard/testset.jsonl
+guard/*.jsonl
