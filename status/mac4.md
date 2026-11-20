@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- prompts_direction.zip (data_tools/output/direction.jsonl, 128 English rows d0001-d0128): shasum 644d06b86e70c12e6ebf79182a3be076a09fef82
 - Env: .venv rebuilt with Python 3.12.16 (/opt/homebrew/bin/python3.12); torch 2.15.0, transformers 4.57.3, MPS ok; huggingface_hub 0.36.2.
 - mac1 NOTE: requirements.txt pins Sphinx==9.2.0, which needs Python >= 3.13. On 3.12 I installed everything else as pinned, with Sphinx unpinned (got 9.1.1). requirements.txt is unchanged.
 - analysis/get_data.py: downloads HarmBench (standard), AdvBench, XSTest, Alpaca into data_tools/output/raw/ (gitignored). Deterministic, seed 1234.
