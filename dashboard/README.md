@@ -1,4 +1,4 @@
-# The Language Barrier — Results Dashboard
+# THE LANGUAGE BARRIER — Results Dashboard
 
 > **Tagline**: Do small AI models stop refusing harmful requests when you switch to Kannada or Kanglish?  
 > **Core Question**: Can a gated refusal steer close the gap without over-refusing harmless questions?
@@ -22,13 +22,13 @@ This serves the whole repository root so that relative paths to `../results/mac*
 ## Architecture & Layout
 
 ### 1. Sticky Top Navigation (`#top-nav`)
-- **Brand & Sections**: `The Language Barrier` | `Overview` | `Results` | `Gate tuning` | `Method`
+- **Brand & Sections**: `THE LANGUAGE BARRIER` | `Overview` | `Results` | `Gate tuning` | `Method`
 - **Active Scrollspy**: Highlights the current section on scroll with smooth scrolling (`scroll-behavior: smooth`).
 - **Data Source Control**: Toggle between **Full (real)** [default] and **Show sample data**. The orange `SAMPLE DATA` badge is strictly shown only in sample mode.
 
 ### 2. Homepage & Hero (`#overview`)
-- **Animated Background**: Full-viewport `<canvas>` featuring 35 floating elements (outline padlocks, keys, shields, and neutral multilingual words: *"no"*, *"refuse"*, *"safe"*, *"guardrail"*, *"language"*, *"beda"*, *"illa"*, *"ಬೇಡ"*, *"ಇಲ್ಲ"*, *"ಭಾಷೆ"*).
-- **Subtle Dynamics**: Slow drift, gentle rotation, soft opacity fade (`0.08` to `0.20`), mouse parallax tracking, and a clear zone behind hero copy. Pauses when the tab is hidden and respects `prefers-reduced-motion`.
+- **Animated Background**: Full-viewport `<canvas>` featuring 35 floating elements in luminous light yellow tones (`#D9B44A` / `#E5C86C`) (outline padlocks, keys, shields, and neutral multilingual words: *"no"*, *"refuse"*, *"safe"*, *"guardrail"*, *"language"*, *"beda"*, *"illa"*, *"ಬೇಡ"*, *"ಇಲ್ಲ"*, *"ಭಾಷೆ"*).
+- **Subtle Dynamics**: Slow drift, gentle rotation, soft opacity fade (`0.36` to `0.56`), mouse parallax tracking, and a clear zone behind hero copy. Pauses when the tab is hidden and respects `prefers-reduced-motion`.
 - **Live Stat Cards**: Dynamically calculated from loaded CSVs:
   - **Largest Safety Gap**: English vs lowest Kannada refusal rate drop across models.
   - **Llama Guard Baseline**: English vs Kanglish moderation flag rate.
