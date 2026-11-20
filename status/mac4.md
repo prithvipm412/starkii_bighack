@@ -1,6 +1,8 @@
 # Mac4 status
 
 Done:
+- Env: .venv rebuilt with Python 3.12.16 (/opt/homebrew/bin/python3.12); torch 2.15.0, transformers 4.57.3, MPS ok; huggingface_hub 0.36.2.
+- mac1 NOTE: requirements.txt pins Sphinx==9.2.0, which needs Python >= 3.13. On 3.12 I installed everything else as pinned, with Sphinx unpinned (got 9.1.1). requirements.txt is unchanged.
 - analysis/get_data.py: downloads HarmBench (standard), AdvBench, XSTest, Alpaca into data_tools/output/raw/ (gitignored). Deterministic, seed 1234.
 - English inputs now match the CLAUDE.md prompt format exactly ({prompt_id, split, category, source, variant="en", text}):
   raw/en_full.jsonl: h0001-h0300 harmful (200 HarmBench standard, 6 categories + 100 AdvBench "advbench_general"), s0001-s0150 harmless (130 XSTest safe, 13 x 10 types, + 20 Alpaca "general")
