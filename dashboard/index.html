@@ -726,6 +726,214 @@ tr:hover td{background: var(--bg);}
   line-height: 1.55;
 }
 
+/* ── Try the Guard Section ────────────────────────────────── */
+.guard-interactive-card{
+  gap: 1.25rem;
+}
+.guard-chips-wrap{
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+  padding: 0.25rem 0;
+}
+.guard-chips-label{
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--muted);
+}
+.guard-chip{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.35rem 0.85rem;
+  font-family: inherit;
+  font-size: 0.82rem;
+  color: var(--ink);
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  transition: all var(--transition);
+}
+.guard-chip:hover{
+  border-color: var(--olive);
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+.chip-lang{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 3px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.7rem;
+  padding: 0.05rem 0.3rem;
+  color: var(--muted);
+}
+.guard-input-row{
+  display: flex;
+  gap: 0.75rem;
+  width: 100%;
+}
+@media (max-width: 680px){
+  .guard-input-row{
+    flex-direction: column;
+  }
+}
+.guard-input-wrap{
+  flex: 1;
+}
+#guard-input{
+  width: 100%;
+  padding: 0.75rem 1.1rem;
+  font-family: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  outline: none;
+  transition: border-color var(--transition), box-shadow var(--transition);
+}
+#guard-input:focus{
+  border-color: var(--olive);
+  box-shadow: 0 0 0 3px rgba(91, 107, 58, 0.15);
+}
+.spinner-small{
+  width: 14px;
+  height: 14px;
+  border: 2px solid rgba(245, 241, 230, 0.3);
+  border-top-color: var(--bg);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+  display: inline-block;
+  vertical-align: middle;
+}
+.guard-result-card{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 1.25rem 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  animation: fadeIn 0.25s ease;
+}
+@keyframes fadeIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+.guard-result-header{
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+.guard-verdict-pill{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+.guard-verdict-pill.allowed{
+  color: var(--olive);
+}
+.guard-verdict-pill.blocked{
+  color: var(--burgundy);
+}
+.guard-latency-badge{
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 0.2rem 0.55rem;
+  border-radius: 4px;
+}
+.guard-result-grid{
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1rem 1.5rem;
+}
+@media (max-width: 600px){
+  .guard-result-grid{grid-template-columns: 1fr;}
+}
+.guard-metric-item{
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+.guard-metric-full{
+  grid-column: 1 / -1;
+}
+.guard-metric-label{
+  font-size: 0.76rem;
+  font-variant: all-small-caps;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+}
+.guard-metric-val{
+  font-size: 0.95rem;
+  color: var(--ink);
+  font-weight: 500;
+}
+.guard-risk-pct{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: var(--ink);
+}
+.guard-risk-track{
+  width: 100%;
+  height: 8px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  overflow: hidden;
+  margin-top: 0.15rem;
+}
+.guard-risk-fill{
+  height: 100%;
+  border-radius: 999px;
+  transition: width 0.4s ease;
+}
+.guard-offline-box{
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-left: 3px solid var(--ochre);
+  border-radius: 6px;
+  padding: 1.1rem 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  color: var(--ink);
+  animation: fadeIn 0.25s ease;
+}
+.guard-offline-title{
+  font-size: 0.92rem;
+  font-weight: 500;
+  color: var(--ink);
+}
+.guard-offline-title code{
+  font-weight: 600;
+  color: var(--olive);
+}
+.guard-offline-sub{
+  font-size: 0.8rem;
+  color: var(--muted);
+}
+.guard-footnote{
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.5;
+  border-top: 1px solid var(--border);
+  padding-top: 0.75rem;
+  margin-top: -0.25rem;
+}
+
 /* ── Responsive Adjustments ──────────────────────────────── */
 @media (max-width: 900px){
   .hero-stats-grid{grid-template-columns: 1fr;}
@@ -750,6 +958,7 @@ tr:hover td{background: var(--bg);}
     <a href="#overview" class="nav-brand">THE LANGUAGE BARRIER</a>
     <div class="nav-links">
       <a href="#overview" class="nav-link active">Overview</a>
+      <a href="#try-guard" class="nav-link">Try the guard</a>
       <a href="#results" class="nav-link">Results</a>
       <a href="#gate-tuning" class="nav-link">Gate tuning</a>
       <a href="#method" class="nav-link">Method</a>
@@ -812,8 +1021,72 @@ tr:hover td{background: var(--bg);}
 
     <!-- BUTTONS -->
     <div class="hero-actions">
-      <a href="#results" class="btn-olive">View results</a>
+      <a href="#try-guard" class="btn-olive">Try the guard</a>
+      <a href="#results" class="btn-olive-outline">View results</a>
       <a href="#gate-tuning" class="btn-olive-outline">Gate tuning</a>
+    </div>
+  </div>
+</section>
+
+<!-- ── SECTION: TRY THE GUARD (#try-guard) ─────────────────── -->
+<section id="try-guard" class="section-wrap">
+  <div class="section-header">
+    <h2 class="section-title">Try the Guard</h2>
+    <p class="section-desc">
+      Live interactive test of the deployable multilingual safety guard. Type a message in English, Kannada script, Kanglish or code-mixed text to evaluate moderation in real time.
+    </p>
+  </div>
+
+  <div class="card full-width guard-interactive-card">
+    <div class="card-title">
+      <span>Interactive Guard Test</span>
+      <span class="tag">LOCAL INFERENCE · 8787</span>
+    </div>
+
+    <!-- Example Chips with SAFE messages only -->
+    <div class="guard-chips-wrap">
+      <span class="guard-chips-label">Safe examples:</span>
+      <button type="button" class="guard-chip" onclick="applyGuardExample('How do I kill a Python process?')">
+        <span>How do I kill a Python process?</span>
+        <span class="chip-lang">en</span>
+      </button>
+      <button type="button" class="guard-chip" onclick="applyGuardExample('ಪೈಥಾನ್ ಪ್ರಕ್ರಿಯೆಯನ್ನು ಕೊನೆಗೊಳಿಸುವುದು ಹೇಗೆ?')">
+        <span>ಪೈಥಾನ್ ಪ್ರಕ್ರಿಯೆಯನ್ನು ಕೊನೆಗೊಳಿಸುವುದು ಹೇಗೆ?</span>
+        <span class="chip-lang">kn</span>
+      </button>
+      <button type="button" class="guard-chip" onclick="applyGuardExample('ivattu Bengaluru weather hegidhe?')">
+        <span>ivattu Bengaluru weather hegidhe?</span>
+        <span class="chip-lang">kn_latn</span>
+      </button>
+      <button type="button" class="guard-chip" onclick="applyGuardExample('ಇವತ್ತು weather forecast ಏನಿದೆ?')">
+        <span>ಇವತ್ತು weather forecast ಏನಿದೆ?</span>
+        <span class="chip-lang">kn_mix</span>
+      </button>
+    </div>
+
+    <!-- Input Form -->
+    <form id="guard-form" onsubmit="handleGuardCheck(event)" class="guard-input-row">
+      <div class="guard-input-wrap">
+        <input 
+          type="text" 
+          id="guard-input" 
+          placeholder="Type a message in English, Kannada, Kanglish or code-mixed" 
+          autocomplete="off"
+          required
+        />
+      </div>
+      <button type="submit" id="guard-submit-btn" class="btn-olive">
+        <span id="guard-btn-text">Check</span>
+        <span id="guard-btn-spinner" class="spinner-small" style="display:none"></span>
+      </button>
+    </form>
+
+    <!-- Result Card Container -->
+    <div id="guard-result-container" style="display:none"></div>
+
+    <!-- Footnote -->
+    <div class="guard-footnote">
+      Layers: input check (translate → Llama Guard) and output check. In-model steering is a research result, not used here.
     </div>
   </div>
 </section>
@@ -1192,7 +1465,7 @@ const navObserver = new IntersectionObserver((entries) => {
   });
 }, { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0 });
 
-['overview', 'results', 'gate-tuning', 'method'].forEach(id => {
+['overview', 'try-guard', 'results', 'gate-tuning', 'method'].forEach(id => {
   const el = document.getElementById(id);
   if (el) navObserver.observe(el);
 });
@@ -2260,6 +2533,124 @@ function median(arr) {
   if (!arr.length) return 0;
   const m = Math.floor(arr.length / 2);
   return arr.length % 2 ? arr[m] : (arr[m-1]+arr[m]) / 2;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// TRY THE GUARD INTERACTIVE CLIENT
+// ═══════════════════════════════════════════════════════════════════
+async function handleGuardCheck(e) {
+  if (e) e.preventDefault();
+  const input = document.getElementById('guard-input');
+  const btn = document.getElementById('guard-submit-btn');
+  const btnText = document.getElementById('guard-btn-text');
+  const btnSpinner = document.getElementById('guard-btn-spinner');
+  const resContainer = document.getElementById('guard-result-container');
+
+  const text = (input.value || '').trim();
+  if (!text) return;
+
+  btn.disabled = true;
+  btnText.textContent = 'Checking…';
+  btnSpinner.style.display = 'inline-block';
+  resContainer.style.display = 'block';
+  resContainer.innerHTML = '<div class="state" style="min-height:90px;"><div class="spinner"></div><span>Querying guard server…</span></div>';
+
+  try {
+    const ctrl = new AbortController();
+    const tid = setTimeout(() => ctrl.abort(), 12000);
+
+    const resp = await fetch('http://127.0.0.1:8787/check', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ text }),
+      signal: ctrl.signal
+    });
+    clearTimeout(tid);
+
+    if (!resp.ok) {
+      throw new Error(`HTTP ${resp.status}`);
+    }
+
+    const data = await resp.json();
+    renderGuardResult(data);
+  } catch (err) {
+    renderGuardOffline();
+  } finally {
+    btn.disabled = false;
+    btnText.textContent = 'Check';
+    btnSpinner.style.display = 'none';
+  }
+}
+
+function applyGuardExample(text) {
+  const input = document.getElementById('guard-input');
+  input.value = text;
+  handleGuardCheck();
+}
+
+function renderGuardOffline() {
+  const container = document.getElementById('guard-result-container');
+  container.innerHTML = `
+    <div class="guard-offline-box">
+      <div class="guard-offline-title">Guard server offline. Start it with: <code>python -m guard.server --preload</code></div>
+      <div class="guard-offline-sub">Ensure the local API is running on port 8787 to test live inputs against Llama Guard 3 1B and NLLB-200.</div>
+    </div>
+  `;
+}
+
+function renderGuardResult(data) {
+  const container = document.getElementById('guard-result-container');
+  const isBlocked = (data.verdict === 'block') || data.blocked === true;
+  const verdictText = isBlocked ? 'Blocked' : 'Allowed';
+  const verdictClass = isBlocked ? 'blocked' : 'allowed';
+
+  const layer = data.layer || '—';
+  const detected = data.detected || '—';
+  const detectedMap = {
+    'en': 'English (en)',
+    'kn': 'Kannada script (kn)',
+    'kn_latn': 'Kanglish (kn_latn)',
+    'kn_mix': 'Code-mixed (kn_mix)'
+  };
+  const detectedLabel = detectedMap[detected] || detected;
+
+  const pUnsafe = typeof data.p_unsafe === 'number' ? data.p_unsafe : 0;
+  const pPct = (pUnsafe * 100).toFixed(1);
+  const pWidth = Math.max(0, Math.min(100, pPct));
+  const pColor = isBlocked ? 'var(--burgundy)' : 'var(--olive)';
+
+  const latency = data.latency_ms !== undefined ? `${data.latency_ms} ms` : '—';
+
+  container.innerHTML = `
+    <div class="guard-result-card ${verdictClass}">
+      <div class="guard-result-header">
+        <span class="guard-verdict-pill ${verdictClass}">
+          <span style="display:inline-block;width:10px;height:10px;border-radius:50%;background:${isBlocked ? 'var(--burgundy)' : 'var(--olive)'};"></span>
+          ${verdictText}
+        </span>
+        <span class="guard-latency-badge">${latency}</span>
+      </div>
+      <div class="guard-result-grid">
+        <div class="guard-metric-item">
+          <div class="guard-metric-label">Deciding Layer</div>
+          <div class="guard-metric-val"><code>${layer}</code></div>
+        </div>
+        <div class="guard-metric-item">
+          <div class="guard-metric-label">Detected Style</div>
+          <div class="guard-metric-val">${detectedLabel}</div>
+        </div>
+        <div class="guard-metric-item guard-metric-full">
+          <div class="guard-metric-label">
+            <span>Risk Score (<code>p_unsafe</code>)</span>
+            <span class="guard-risk-pct">${pPct}%</span>
+          </div>
+          <div class="guard-risk-track">
+            <div class="guard-risk-fill" style="width: ${pWidth}%; background: ${pColor};"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
 }
 
 // ═══════════════════════════════════════════════════════════════════

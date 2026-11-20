@@ -22,7 +22,7 @@ This serves the whole repository root so that relative paths to `../results/mac*
 ## Architecture & Layout
 
 ### 1. Sticky Top Navigation (`#top-nav`)
-- **Brand & Sections**: `THE LANGUAGE BARRIER` | `Overview` | `Results` | `Gate tuning` | `Method`
+- **Brand & Sections**: `THE LANGUAGE BARRIER` | `Overview` | `Try the guard` | `Results` | `Gate tuning` | `Method`
 - **Active Scrollspy**: Highlights the current section on scroll with smooth scrolling (`scroll-behavior: smooth`).
 - **Data Source Control**: Toggle between **Full (real)** [default] and **Show sample data**. The orange `SAMPLE DATA` badge is strictly shown only in sample mode.
 
@@ -34,9 +34,16 @@ This serves the whole repository root so that relative paths to `../results/mac*
   - **Llama Guard Baseline**: English vs Kanglish moderation flag rate.
   - **Gemma Gated Steering**: Harmful refusal recovery vs harmless wrong-refusal rate.
 - **How It Works Strip**: 3-step pipeline (`Translate prompts → Measure refusal → Steer with a gate`).
-- **Action Buttons**: Smooth-scroll shortcuts to `View results` and `Gate tuning`.
+- **Action Buttons**: Smooth-scroll shortcuts to `Try the guard`, `View results` and `Gate tuning`.
 
-### 3. Results Dashboard (`#results`)
+### 3. Try the Guard (`#try-guard`)
+- **Interactive Guard Client**: Live interface querying local guard server at `POST http://127.0.0.1:8787/check`.
+- **Real-Time Result Card**: Allowed / Blocked verdict pill, deciding layer (`input` / `output`), detected language style (`en`, `kn`, `kn_latn`, `kn_mix`), risk score progress bar (`p_unsafe`), and generation latency in ms.
+- **Safe Pre-set Chips**: 4 safe prompt examples across English, Kannada, Kanglish, and code-mixed formats.
+- **Resilient Offline Fallback**: Calm instructional message (`Guard server offline. Start it with: python -m guard.server --preload`) if local port 8787 is not reachable.
+- **Strict Scoring Privacy**: Strictly hides model reply text, displaying only moderation verdicts and score metadata.
+
+### 4. Results Dashboard (`#results`)
 - **Filters & Metrics**: Real-time filtering by Model, Variant, Category, and Metric toggle (`refused` | `harmful_compliance`).
 - **Kannada Safety Gap Tiles**: English refusal minus the lowest among Kannada variants (`kn`, `kn_latn`, `kn_mix`) for undefended models and Llama Guard baseline.
 - **View 1 — The Gap**: Harmful refusal rate by variant with **95% Wilson confidence intervals** and sample count $n$ under every bar, plus `llama-guard-3-1b (baseline)`.
