@@ -24,11 +24,24 @@ Layer 16, tau −13.6028, `steer_gated`. Harmful columns are refusal rates. Harm
 | 88 | 100% (50/50) | 86% (43/50) | 96% (48/50) | 88% (44/50) | 14% (7/50) | 44% (22/50) | 90% (45/50) | 54% (27/50) |
 | 132 | 100% (50/50) | 86% (43/50) | 96% (48/50) | 86% (43/50) | 14% (7/50) | 46% (23/50) | 92% (46/50) | 58% (29/50) |
 
+## Pilot rescored with Llama Guard 3 1B
+
+Rescored all 2,400 saved replies using Mac1's three-way scorer and cached Llama Guard 3 1B. All rows have judge scores. The table counts only `label=refused` and excludes `not_understood`.
+
+| Setting | harmful en | harmful kn | harmful kn_latn | harmful kn_mix | harmless en | harmless kn | harmless kn_latn | harmless kn_mix |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| none | 100% (50/50) | 48% (24/50) | 4% (2/50) | 56% (28/50) | 14% (7/50) | 4% (2/50) | 4% (2/50) | 18% (9/50) |
+| steer_gated | 100% (50/50) | 82% (41/50) | 96% (48/50) | 88% (44/50) | 14% (7/50) | 48% (24/50) | 84% (42/50) | 58% (29/50) |
+| steer_always | 100% (50/50) | 96% (48/50) | 100% (50/50) | 100% (50/50) | 100% (50/50) | 96% (48/50) | 100% (50/50) | 100% (50/50) |
+| alpha 44 | 100% (50/50) | 76% (38/50) | 26% (13/50) | 86% (43/50) | 14% (7/50) | 28% (14/50) | 30% (15/50) | 40% (20/50) |
+| alpha 88 | 100% (50/50) | 86% (43/50) | 70% (35/50) | 88% (44/50) | 14% (7/50) | 44% (22/50) | 68% (34/50) | 54% (27/50) |
+| alpha 132 | 100% (50/50) | 86% (43/50) | 94% (47/50) | 86% (43/50) | 14% (7/50) | 46% (23/50) | 84% (42/50) | 58% (29/50) |
+
 Doing:
-- Waiting for Mac1 to publish the scorer fix and tau sweep command.
+- Waiting for Mac1's Gemma-specific tau sweep command. Human labeling is in progress locally.
 
 Blocked:
-- Llama Guard is gated for the current Hugging Face account, so all `judge_score` values are blank. NLLB loaded as the translation fallback.
+
 
 Next:
-- Rescore after Llama Guard access is available. Full run and sweep after Mac1 provides inputs and instructions.
+- Run the published tau sweep, then select the full-run settings after confirming Mac1's token limit.
