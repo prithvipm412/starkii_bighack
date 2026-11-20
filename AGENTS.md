@@ -15,7 +15,7 @@ Report: refusal rate on harmful, wrong-refusal rate on harmless, latency, where 
 - mac1 (M5) Claude Code: pipeline/, configs/, requirements.txt, results/mac1/, status/mac1.md — Qwen/Qwen2.5-3B-Instruct
 - mac2 (M5) Codex: data_tools/, results/mac2/, status/mac2.md — meta-llama/Llama-3.2-3B-Instruct
 - mac3 (M5) Codex: results/mac3/, status/mac3.md — google/gemma-2-2b-it; Antigravity owns dashboard/
-- mac4 (M4) Claude Code: baseline/, analysis/, results/mac4/, status/mac4.md — IndicTrans2 + meta-llama/Llama-Guard-3-1B
+- mac4 (M4) Claude Code: baseline/, analysis/, guard/, results/mac4/, status/mac4.md — IndicTrans2 + meta-llama/Llama-Guard-3-1B
 Only mac1 edits pipeline/. Pipeline bug? Write it under Blocked in your status file.
 
 ## Prompt file format (JSONL, one prompt per line)
