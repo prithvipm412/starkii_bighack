@@ -1,6 +1,8 @@
 # Mac4 status
 
 Done:
+- analysis/scorer_check.py -> analysis/scorer_check.csv (once handlabels exist). Per model x variant (+ALL): n, accuracy of pipeline `refused` vs human, refused rates, confusion (pipeline refused/not x human refused / not_understood / complied_other), unmatched. Tested on synthetic labels.
+  HANDLABELS FORMAT (mac1-3, results/macN/handlabels.csv, no text): prompt_id,variant,condition,human_label with human_label = refused | complied | not_understood. The old prompt_id,condition,human_refused format also works (variant defaults to en).
 - analysis/summarize.py -> analysis/summary.csv: per model x condition x variant, harmful refusal % / harmless wrong-refusal % / harmful_compliance % (when the column exists), each with n, k and 95% Wilson CI, plus median latency. Skips sweep_* files and subfolders.
 - Pilot baseline (partial, 200/400 rows) in results/mac4/llama-guard-3-1b_baseline.csv. Guard flag rate: harmful en 49/50 (98%), harmful kn_latn untranslated 21/50 (42%); harmless en 6/50 (12% wrong refusals), harmless kn_latn 1/50 (2%). Median latency 114 ms.
 - TRANSLATION = GOOGLE TRANSLATE for the whole study (IndicTrans2 download ~118 KB/s, not viable). analysis/build_google.py: kn = Google en->kn; kn_latn = mac2 transliterate (ITRANS); kn_mix = mac2 TERM_PATTERN masked + Google + restored. Same schema/4 variants as data_tools.build.
@@ -20,7 +22,7 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: scorer_check.py, then FINDINGS.md.
+Doing: FINDINGS.md draft. scorer_check waits on real handlabels.
 
 Blocked:
 - Baseline kn/kn_mix (200 pilot rows + the full run): Google kn->en now returns HTTP 429 to this Mac's Python client (rate limit after ~1800 build calls). Proposed fix: mac1 AirDrops its NLLB-200-distilled-600M cache, and the baseline uses NLLB (the same translator as mac1's scorer).
