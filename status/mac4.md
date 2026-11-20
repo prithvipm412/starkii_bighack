@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- analysis/FINDINGS.md draft (numbers only, pilot): gap per model (Qwen, Gemma), Llama Guard en/kn_latn, projections, gated vs always, failure analysis. PENDING: Llama-3.2, Guard kn/kn_mix, full set, handlabels, translation check.
 - analysis/scorer_check.py -> analysis/scorer_check.csv (once handlabels exist). Per model x variant (+ALL): n, accuracy of pipeline `refused` vs human, refused rates, confusion (pipeline refused/not x human refused / not_understood / complied_other), unmatched. Tested on synthetic labels.
   HANDLABELS FORMAT (mac1-3, results/macN/handlabels.csv, no text): prompt_id,variant,condition,human_label with human_label = refused | complied | not_understood. The old prompt_id,condition,human_refused format also works (variant defaults to en).
 - analysis/summarize.py -> analysis/summary.csv: per model x condition x variant, harmful refusal % / harmless wrong-refusal % / harmful_compliance % (when the column exists), each with n, k and 95% Wilson CI, plus median latency. Skips sweep_* files and subfolders.
@@ -22,7 +23,7 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: FINDINGS.md draft. scorer_check waits on real handlabels.
+Doing: waiting on a local kn->en translator (NLLB from mac1) to finish the Guard pilot, then the full baseline. scorer_check waits on handlabels.
 
 Blocked:
 - Baseline kn/kn_mix (200 pilot rows + the full run): Google kn->en now returns HTTP 429 to this Mac's Python client (rate limit after ~1800 build calls). Proposed fix: mac1 AirDrops its NLLB-200-distilled-600M cache, and the baseline uses NLLB (the same translator as mac1's scorer).
