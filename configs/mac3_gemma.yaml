@@ -1,0 +1,17 @@
+# Mac3 — gemma-2-2b-it (gated: accept licence on HF + hf auth login)
+name: gemma-2-2b-it          # = model_id basename; file names: outputs/directions/<name>.pt, results/<machine>/<name>_<condition>.csv
+model_id: google/gemma-2-2b-it
+machine: mac3               # results go to results/<machine>/
+device: mps
+dtype: bfloat16           # gemma-2 overflows (NaN/garbage) in fp16; bf16 is the supported dtype
+attn_implementation: eager  # recommended for gemma-2 (softcapping)
+seed: 0
+max_new_tokens: 64
+batch_size: 8
+# Steering. null = take the default from outputs/directions/<name>.pt (written by extract_direction):
+#   layer: best-separation layer in the middle third
+#   alpha: norm of the (unnormalised) harmful-minus-harmless mean difference at that layer
+#   tau:   midpoint of mean English harmful / harmless projections at that layer
+layer: null
+alpha: null
+tau: null

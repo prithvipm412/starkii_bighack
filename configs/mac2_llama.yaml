@@ -1,0 +1,17 @@
+# Mac2 — Llama-3.2-3B-Instruct (gated: accept licence on HF + hf auth login)
+name: Llama-3.2-3B-Instruct  # = model_id basename; file names: outputs/directions/<name>.pt, results/<machine>/<name>_<condition>.csv
+model_id: meta-llama/Llama-3.2-3B-Instruct
+machine: mac2               # results go to results/<machine>/
+device: mps
+dtype: float16
+attn_implementation: sdpa
+seed: 0
+max_new_tokens: 64
+batch_size: 8
+# Steering. null = take the default from outputs/directions/<name>.pt (written by extract_direction):
+#   layer: best-separation layer in the middle third
+#   alpha: norm of the (unnormalised) harmful-minus-harmless mean difference at that layer
+#   tau:   midpoint of mean English harmful / harmless projections at that layer
+layer: null
+alpha: null
+tau: null
