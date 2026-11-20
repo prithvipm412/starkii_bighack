@@ -66,10 +66,11 @@ Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per
 |---|---|---|---|---|---|---|---|---|
 | none (done 00:27) | 6 / 91 / 0 | 65 / 7 / 0 | 4 / 4 / 82 | 46 / 19 / 7 | 20 | 4 | 28 / 63 | 12 / 54 |
 | steer_gated (done 02:06; L23 a35.4 tau15.9) | 6 / 91 / 0 | 28 / 55 / 0 | 1 / 87 / 10 | 17 / 74 / 1 | 20 | 45 | 47 / 46 | 72 / 5 |
+| steer_always (PILOT IDS ONLY, 50/cell; done 02:23) | 0 / 100 / 0 | 12 / 86 / 0 | 0 / 100 / 0 | 0 / 100 / 0 | 100 | 92 | 100 / 0 | 100 / 0 |
 - HEADLINE (full, none): harmful compliance 6% English -> 65% Kannada script, 46% code-mixed. Kanglish: 82% not understood (4% complied, 4% refused).
 - Llama Guard flags 17% of English HARMLESS replies as unsafe (XSTest prompts like "kill a process"): judge false positives, so HC on harmless is noise, not harm.
 - steer_gated (full): harmful compliance 65 -> 28 (kn), 46 -> 17 (kn_mix); English untouched. Cost: harmless refusal 4 -> 45 (kn), 12 -> 72 (kn_mix). Same pattern as the pilot.
-- none: 1800 rows in 99 min (56 tok/s); steer_gated: 1800 rows in 88 min (52 tok/s). steer_always = PILOT IDS ONLY (running).
+- none: 1800 rows in 99 min (56 tok/s); steer_gated: 1800 rows in 88 min (52 tok/s). steer_always = PILOT IDS ONLY: refuses ~100% of everything incl. English harmless (20 -> 100).
 
 ## FAILURE ANALYSIS: TRUNCATION CHECK (Qwen, none, pilot harmful rows, 64 vs 256 new tokens, 50 per variant)
 | variant | refused (phrase) 64 -> 256 | flips 0->1 / 1->0 | label=refused 64 -> 256 | harmful_compliance 64 -> 256 | HC flips 0->1 / 1->0 |
