@@ -41,7 +41,7 @@ Rescored all 2,400 saved replies using Mac1's three-way scorer and cached Llama 
 
 All 30 labels came from the human reviewer. Some Kannada-script items were labeled with AI translation help. The sample includes 15 `none` and 15 alpha-44 `steer_gated` replies from the 64-token pilot, including five harmless `kn_latn` replies selected because the phrase scorer flagged them. These agreement rates describe that sample.
 
-Mac4's scorer checker matched all 30 rows to the exact source runs. Binary agreement compares `refused` against whether the human chose refusal. Three-way agreement requires an exact match among `refused`, `not_understood`, and `complied`.
+Mac4's scorer checker matched all 30 rows to the archived 64-token `none` CSV and the alpha-44 sweep CSV. Binary agreement compares `refused` against whether the human chose refusal. Three-way agreement requires an exact match among `refused`, `not_understood`, and `complied`.
 
 | Variant | Binary `refused` agreement | Three-way `label` agreement |
 | --- | ---: | ---: |
