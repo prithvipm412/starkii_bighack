@@ -1,14 +1,14 @@
 # Mac3 status
 
 Done:
-- Pulled `origin/main`. Confirmed arm64 and an existing virtual environment with Python 3.9.6.
+- Installed the shared requirements on Python 3.12.16. Verified PyTorch 2.15.0 can allocate a tensor on MPS.
+- Confirmed access to the official `google/gemma-2-2b-it` checkpoint.
 
 Doing:
-- Phase 0–1 setup for `google/gemma-2-2b-it`.
+- Resuming the final Gemma weight shard over HTTP after the Xet transfer returned a response-decoding error.
 
 Blocked:
-- Mac1 has yet to push `requirements.txt`. Dependency installation, model download, and MPS verification are pending.
-- The pilot also needs the pipeline modules, `configs/mac3_gemma.yaml`, and `data_tools/output/pilot.jsonl`. The full run and sweep await Mac1's instructions.
+- Pilot inputs `data_tools/output/direction.jsonl` and `data_tools/output/pilot.jsonl` have not arrived locally.
 
 Next:
-- Install the shared requirements, download Gemma, and verify that it loads on MPS.
+- Verify Gemma on MPS with eager attention, starting with float16 and retrying with bfloat16 if needed. Gemma's chat template requires a user-only test message because it rejects the system role.
