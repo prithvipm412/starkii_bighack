@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- analysis/missed.py -> missed.csv + FINDINGS "What beats every layer" (IDs and counts only). Qwen full: input + steer_gated misses kn 2/300, kn_mix 3/300, kn_latn 0, en 0 (input only: kn 8, kn_mix 4). Llama pilot: 0-1/50 per variant.
 - baseline_translit on the FULL set: 450/450 kn_latn rows (results/mac4/llama-guard-3-1b_baseline_translit.csv). combined.py now uses translit for all 450 kn_latn rows. Qwen steer_gated full has landed, so all 4 layered settings are filled for Qwen.
 - guard/cli.py (python -m guard.cli "text" [--reply ...] -> JSON verdict; exit 0 allow / 1 block / 2 error) and guard/server.py (stdlib, 127.0.0.1:8787, POST /check, GET /health, CORS *, 32 KB cap, no request text in logs). Tested: health, preflight 204, check, 400 / 413 / 404. Warm input latency via the server: en 114 ms, kn 289, kn_latn 379.
 - guard/README.md: layers, run commands, measured latency per layer, effect, limits.
