@@ -382,7 +382,9 @@ async function tryLoadCSV(url) {
 
 /**
  * Discover CSVs in a directory by fetching its index page and parsing <a href> links.
- * Falls back to [] if the server doesn't expose directory listings.
+ * Python http.server emits:  <li><a href="filename.csv">filename.csv</a></li>
+ * The href is a URL-encoded bare filename (no path prefix, no leading slash).
+ * Falls back to [] if the server doesn't expose directory listings or returns non-200.
  */
 async function listDirCSVs(dirUrl) {
   try {
@@ -392,31 +394,40 @@ async function listDirCSVs(dirUrl) {
     clearTimeout(tid);
     if (!resp.ok) return [];
     const html = await resp.text();
-    // Extract all href="*.csv" that are relative (not absolute URLs)
-    return [...html.matchAll(/href="([^"]+\.csv)"/gi)]
+    // Match href="<anything>.csv" — capture the raw (possibly URL-encoded) href value.
+    // Filter out absolute URLs (/..., http://...) which are nav links, not files.
+    const csvRefs = [...html.matchAll(/href="([^"?#]+\.csv)"/gi)]
       .map(m => m[1])
-      .filter(name => !name.startsWith('http') && !name.startsWith('/'))
-      .map(name => dirUrl + name);
+      .filter(ref => !ref.startsWith('http') && !ref.startsWith('/') && !ref.startsWith('?'));
+    // Build full URLs. Keep href percent-encoded as-is — browsers resolve it correctly.
+    return csvRefs.map(ref => dirUrl + ref);
   } catch(_) { return []; }
 }
 
 async function loadRealCSVs() {
   const urlSet = new Set();
 
-  // 1. Try directory listing for each mac results folder
+  // ── Pass 1: directory-listing discovery (primary, model-name-agnostic) ──────────
+  // Python http.server exposes a browseable listing — we parse every *.csv href.
+  // This catches any filename the pipeline produces, now or in the future.
   const listings = await Promise.all(REAL_DIRS.map(d => listDirCSVs(d)));
   listings.forEach(urls => urls.forEach(u => urlSet.add(u)));
 
-  // 2. Probe pattern-based fallback: <model>_<condition>.csv per AGENTS.md
-  for (const dir of REAL_DIRS) {
-    for (const mdl of KNOWN_MODELS) {
-      for (const cond of CONDITIONS) {
-        urlSet.add(`${dir}${mdl}_${cond}.csv`);
+  // ── Pass 2: pattern-based fallback (for servers without directory listing) ────────
+  // Per AGENTS.md the pipeline writes <model>_<condition>.csv.
+  // KNOWN_MODELS only used here as a fallback when listing returns nothing.
+  const listedCount = urlSet.size;
+  if (listedCount === 0) {
+    for (const dir of REAL_DIRS) {
+      for (const mdl of KNOWN_MODELS) {
+        for (const cond of CONDITIONS) {
+          urlSet.add(`${dir}${mdl}_${cond}.csv`);
+        }
       }
     }
   }
 
-  // 3. Load all candidates, validate header, skip mismatches silently
+  // ── Pass 3: load, validate header, skip mismatches silently ──────────────────────
   const batches = await Promise.all([...urlSet].map(url => tryLoadCSV(url)));
   const rows = batches.flat();
 

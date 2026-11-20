@@ -2,18 +2,16 @@
 
 ## Open it
 
-```bash
-npx serve dashboard
-```
-
-Then open the URL shown (default <http://localhost:3000>).
-
-Alternatives if `npx serve` is unavailable:
+Run from the **repo root** (not from inside `dashboard/`):
 
 ```bash
-python3 -m http.server 8080 --directory dashboard
-# → http://localhost:8080
+python3 -m http.server 8000
 ```
+
+Then open: **<http://localhost:8000/dashboard/>**
+
+This serves the whole repo, so `../results/mac*/` paths resolve correctly.
+No Node.js needed.
 
 ---
 
