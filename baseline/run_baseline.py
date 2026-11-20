@@ -1,14 +1,14 @@
-"""Baseline defence: translate non-English input to English (IndicTrans2 indic->en), then Llama Guard 3 1B.
+"""Baseline defence: translate non-English input to English (Google Translate kn->en), then Llama Guard 3 1B.
 
 refused = 1 if Llama Guard labels the (translated) user prompt "unsafe".
 judge_score = P(unsafe) vs P(safe) at Llama Guard's verdict token.
-latency_ms = translation + guard time for that prompt (batch size 1, so it is per-prompt latency).
+latency_ms = translation (Google API round trip, network-dependent) + guard time, per prompt (batch size 1).
 
-Preprocessing per variant (IndicProcessor pre/post-processing around IndicTrans2):
+Preprocessing per variant:
   en      -> guard directly
-  kn      -> IndicTrans2 kan_Knda -> eng_Latn -> guard
-  kn_mix  -> IndicTrans2 kan_Knda -> eng_Latn -> guard (English technical terms pass through)
-  kn_latn -> guard UNTRANSLATED (Roman-script Kanglish; IndicTrans2 cannot translate it)
+  kn      -> Google kn -> en -> guard
+  kn_mix  -> Google kn -> en -> guard (English technical terms pass through)
+  kn_latn -> guard UNTRANSLATED (Roman-script Kanglish; kept as decided before the switch to Google)
 
 Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md results format), appending after
 every prompt and resuming on restart. Translations and prompt text are never written to disk.
@@ -25,12 +25,10 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = "meta-llama/Llama-Guard-3-1B"
-TRANSLATOR = "ai4bharat/indictrans2-indic-en-1B"
 MODEL_NAME = "llama-guard-3-1b"
 CONDITION = "baseline"
 FIELDS = ["prompt_id", "split", "category", "variant", "model", "condition",
           "refused", "judge_score", "latency_ms", "commit"]
-MAX_SRC_TOKENS = 256
 
 
 def git_commit() -> str:
@@ -69,24 +67,28 @@ def done_keys(out: Path) -> set:
 
 
 class Translator:
-    def __init__(self, device):
-        import torch
-        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
-        from IndicTransToolkit import IndicProcessor
-        self.torch, self.device = torch, device
-        self.tok = AutoTokenizer.from_pretrained(TRANSLATOR, trust_remote_code=True)
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(TRANSLATOR, trust_remote_code=True).to(device).eval()
-        self.ip = IndicProcessor(inference=True)
+    """Google Translate kn -> en (the study's translator; IndicTrans2 was not downloadable in time)."""
+    URL = "https://translate.googleapis.com/translate_a/single"
 
-    def __call__(self, text: str) -> str:
-        batch = self.ip.preprocess_batch([text], src_lang="kan_Knda", tgt_lang="eng_Latn")
-        enc = self.tok(batch, return_tensors="pt", padding="longest", truncation=True,
-                       max_length=MAX_SRC_TOKENS).to(self.device)
-        with self.torch.inference_mode():
-            gen = self.model.generate(**enc, num_beams=1, do_sample=False, max_length=MAX_SRC_TOKENS,
-                                      use_cache=True)
-        dec = self.tok.batch_decode(gen, skip_special_tokens=True, clean_up_tokenization_spaces=True)
-        return self.ip.postprocess_batch(dec, lang="eng_Latn")[0]
+    def __init__(self, device=None):
+        import requests
+        self.requests = requests
+
+    def __call__(self, text: str, retries: int = 5) -> str:
+        for attempt in range(retries):
+            try:
+                r = self.requests.get(self.URL, params={"client": "gtx", "sl": "kn", "tl": "en", "dt": "t",
+                                                        "q": text}, timeout=20)
+                r.raise_for_status()
+                out = "".join(seg[0] for seg in r.json()[0] if seg and seg[0])
+                if out.strip():
+                    return out
+                raise RuntimeError("empty translation")
+            except Exception as e:
+                if attempt == retries - 1:
+                    raise RuntimeError(f"google kn->en failed: {type(e).__name__}") from e
+                time.sleep(2 * (attempt + 1))
+        raise AssertionError("unreachable")
 
 
 class Guard:
