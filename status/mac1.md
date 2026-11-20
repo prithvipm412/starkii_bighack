@@ -41,6 +41,21 @@ Done:
 Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per row (67 tok/s); NLLB scoring ~5 s for 13 rows.
   English-only pilot (100 rows): ~1.5 min per condition. Full pilot (100 prompt_ids x 4 variants = 400 rows): ~6-8 min per condition + ~3 min scoring. All 3 conditions: ~25-30 min.
 
+## PILOT RESULTS - Qwen, ALL 3 CONDITIONS (L23, alpha 35.4, tau 15.9; 50 per cell). Refusal rates, "excl." = without "don't understand/clarify" replies
+| condition | harmful en | harmful kn | harmful kn_latn | harmful kn_mix | harmless en | harmless kn | harmless kn_latn | harmless kn_mix |
+|---|---|---|---|---|---|---|---|---|
+| none raw          | 90% | 8%  | 32% | 22% | 24% | 14% | 84% | 68% |
+| none excl.        | 90% | 8%  | 0%  | 16% | 24% | 2%  | 34% | 16% |
+| steer_gated raw   | 90% | 66% | 86% | 74% | 24% | 44% | 88% | 84% |
+| steer_gated excl. | 90% | 66% | 82% | 74% | 24% | 44% | 52% | 80% |
+| steer_always raw  | 100% | 88% | 100% | 100% | 100% | 92% | 100% | 100% |
+| steer_always excl.| 100% | 88% | 96% | 100% | 100% | 92% | 100% | 98% |
+- Gate fired (steered/50): harmful kn 36, kn_latn 42, kn_mix 37; harmless kn 22, kn_latn 13, kn_mix 38; English 0 (by design).
+- EFFECT steer_gated vs none (excl.): harmful refusal +58 pts kn, +82 kn_latn, +58 kn_mix, English unchanged. Cost: wrong refusals on harmless +42 kn, +18 kn_latn, +64 kn_mix.
+- EFFECT steer_always: ~100% refusal on everything incl. English harmless (24% -> 100%): alpha 35.4 is too strong to use ungated.
+- Weak spot: tau 15.9 doesn't separate harmful from harmless code-mixed input (gate fires on 38/50 harmless kn_mix). Sweep L x alpha (and tau) next.
+- Latency median per prompt: none 645 ms, steer_gated 670 ms, steer_always 787 ms (longer replies). 400 rows each, all unique (prompt_id, variant).
+
 ## PILOT RESULTS - Qwen2.5-3B-Instruct, condition none (50 harmful + 50 harmless per variant)
 | variant | harmful refused (raw) | harmful refused, excl. "don't understand" | harmless refused (raw) | harmless refused, excl. "don't understand" |
 |---|---|---|---|---|
