@@ -1,16 +1,22 @@
-"""Summarize every results/mac*/*.csv (standard header) into analysis/summary.csv. Numbers only.
+"""Summarize every results/mac*/ result CSV (standard header) into analysis/summary.csv. Numbers only.
 
-Per model x condition x variant:
-  harmful refusal %       (refused=1 on split=harmful)
-  harmless wrong-refusal % (refused=1 on split=harmless)
-  harmful_compliance %     (only if a harmful_compliance column exists)
-each with n and a 95% Wilson CI; plus median latency_ms.
+Per run x scope x model x condition x variant:
+  harmful refusal %         refused=1 on split=harmful (phrase match)
+  harmless wrong-refusal %  refused=1 on split=harmless
+  harmful_compliance %      harmful split, Llama Guard on the reply (only if the column exists)
+  label breakdown           refused / not_understood / complied % per split (only if `label` exists)
+Each rate has n, k and a 95% Wilson CI; plus median latency_ms.
 
-Skipped: files without the standard header, sweep_* files (same conditions, different settings),
-subfolders (gate/, smoke/). Duplicate (model, condition, prompt_id, variant) rows: the last one wins.
+run   = "main" for results/macN/*.csv, else the subfolder name (e.g. pilot64 = 64-token pilot).
+scope = "all"; plus "pilot" (only the pilot's prompt_ids) for cells that also hold non-pilot rows,
+        so full-set files can be compared with pilot-only ones. Pilot ids come from
+        data_tools/output/pilot.jsonl (or raw/en_pilot.jsonl); without them, no pilot scope.
+Skipped: files without the standard header, sweep_* files, gate/ and smoke/ folders.
+Duplicate (run, model, condition, prompt_id, variant) rows: the last one wins.
 Usage: python -m analysis.summarize
 """
 import csv
+import json
 import math
 import statistics
 import sys
@@ -22,6 +28,7 @@ OUT = ROOT / "analysis" / "summary.csv"
 STD = ["prompt_id", "split", "category", "variant", "model", "condition",
        "refused", "judge_score", "latency_ms", "commit"]
 VARIANT_ORDER = {"en": 0, "kn": 1, "kn_latn": 2, "kn_mix": 3}
+PILOT_FILES = [ROOT / "data_tools" / "output" / "pilot.jsonl", ROOT / "data_tools" / "output" / "raw" / "en_pilot.jsonl"]
 
 
 def wilson(k: int, n: int, z: float = 1.96):
@@ -36,14 +43,28 @@ def wilson(k: int, n: int, z: float = 1.96):
 
 def as01(v):
     v = (v or "").strip()
-    return int(float(v)) if v not in ("", "nan", "None") else None
+    try:
+        return int(float(v)) if v not in ("", "nan", "None") else None
+    except ValueError:
+        return None
+
+
+def pilot_ids():
+    for f in PILOT_FILES:
+        try:
+            with f.open(encoding="utf-8") as fh:
+                return {json.loads(l)["prompt_id"] for l in fh if l.strip()}
+        except (OSError, ValueError, KeyError):
+            continue
+    return set()
 
 
 def load():
-    rows = {}
-    files = []
-    for f in sorted(ROOT.glob("results/mac*/*.csv")):
-        if f.name.startswith("sweep_"):
+    rows, files = {}, []
+    paths = sorted(ROOT.glob("results/mac*/*.csv")) + sorted(ROOT.glob("results/mac*/*/*.csv"))
+    for f in paths:
+        run = "main" if f.parent.parent.name == "results" else f.parent.name
+        if f.name.startswith("sweep_") or run in ("gate", "smoke"):
             continue
         try:
             with f.open(newline="", encoding="utf-8") as fh:
@@ -52,7 +73,8 @@ def load():
                     continue
                 files.append(f.relative_to(ROOT))
                 for r in reader:
-                    rows[(r["model"], r["condition"], r["prompt_id"], r["variant"])] = r
+                    r["_run"] = run
+                    rows[(run, r["model"], r["condition"], r["prompt_id"], r["variant"])] = r
         except (OSError, csv.Error, UnicodeDecodeError) as e:
             print(f"skip {f}: {e}", file=sys.stderr)
     return list(rows.values()), files
@@ -66,27 +88,48 @@ def rate(rows, col):
     return n, k, (round(100 * k / n, 1) if n else None), lo, hi
 
 
+def cell_row(run, scope, model, cond, var, rs):
+    harmful = [r for r in rs if r["split"] == "harmful"]
+    harmless = [r for r in rs if r["split"] == "harmless"]
+    row = {"run": run, "scope": scope, "model": model, "condition": cond, "variant": var}
+    for name, sub, col in (("harmful_refusal", harmful, "refused"),
+                           ("harmless_wrong_refusal", harmless, "refused"),
+                           ("harmful_compliance", harmful, "harmful_compliance")):
+        n, k, pct, lo, hi = rate(sub, col)
+        row.update({f"{name}_n": n, f"{name}_k": k, f"{name}_pct": pct,
+                    f"{name}_ci_lo": lo, f"{name}_ci_hi": hi})
+    for split, sub in (("harmful", harmful), ("harmless", harmless)):
+        labs = [(r.get("label") or "").strip() for r in sub]
+        labs = [l for l in labs if l]
+        row[f"{split}_label_n"] = len(labs)
+        for lab in ("refused", "not_understood", "complied"):
+            row[f"{split}_label_{lab}_pct"] = round(100 * labs.count(lab) / len(labs), 1) if labs else None
+    lat = []
+    for r in rs:
+        try:
+            lat.append(float(r["latency_ms"]))
+        except (TypeError, ValueError):
+            pass
+    row["median_latency_ms"] = round(statistics.median(lat)) if lat else None
+    return row
+
+
 def main():
     rows, files = load()
     if not rows:
         sys.exit("no result rows found")
+    pids = pilot_ids()
     cells = defaultdict(list)
     for r in rows:
-        cells[(r["model"], r["condition"], r["variant"])].append(r)
+        cells[(r["_run"], r["model"], r["condition"], r["variant"])].append(r)
     out = []
-    for (model, cond, var), rs in sorted(cells.items(), key=lambda kv: (kv[0][0], kv[0][1], VARIANT_ORDER.get(kv[0][2], 9))):
-        harmful = [r for r in rs if r["split"] == "harmful"]
-        harmless = [r for r in rs if r["split"] == "harmless"]
-        row = {"model": model, "condition": cond, "variant": var}
-        for name, sub, col in (("harmful_refusal", harmful, "refused"),
-                               ("harmless_wrong_refusal", harmless, "refused"),
-                               ("harmful_compliance", harmful, "harmful_compliance")):
-            n, k, pct, lo, hi = rate(sub, col)
-            row.update({f"{name}_n": n, f"{name}_k": k, f"{name}_pct": pct,
-                        f"{name}_ci_lo": lo, f"{name}_ci_hi": hi})
-        lat = [float(r["latency_ms"]) for r in rs if (r.get("latency_ms") or "").strip()]
-        row["median_latency_ms"] = round(statistics.median(lat)) if lat else None
-        out.append(row)
+    key = lambda kv: (kv[0][0], kv[0][1], kv[0][2], VARIANT_ORDER.get(kv[0][3], 9))
+    for (run, model, cond, var), rs in sorted(cells.items(), key=key):
+        out.append(cell_row(run, "all", model, cond, var, rs))
+        if pids and any(r["prompt_id"] not in pids for r in rs):
+            sub = [r for r in rs if r["prompt_id"] in pids]
+            if sub:
+                out.append(cell_row(run, "pilot", model, cond, var, sub))
     OUT.parent.mkdir(parents=True, exist_ok=True)
     with OUT.open("w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(out[0]))
@@ -94,9 +137,11 @@ def main():
         w.writerows(out)
     print(f"{len(files)} files, {len(rows)} rows -> {len(out)} cells -> {OUT.relative_to(ROOT)}")
     for r in out:
-        print(f"{r['model'][:28]:28s} {r['condition']:13s} {r['variant']:8s} "
-              f"harmful {r['harmful_refusal_pct']}% (n={r['harmful_refusal_n']})  "
-              f"harmless {r['harmless_wrong_refusal_pct']}% (n={r['harmless_wrong_refusal_n']})")
+        print(f"{r['run'][:7]:7s} {r['scope']:5s} {r['model'].split('/')[-1][:16]:16s} {r['condition'][:12]:12s} {r['variant']:7s} "
+              f"H n={r['harmful_refusal_n']} ref {r['harmful_refusal_pct']} comp {r['harmful_compliance_pct']} "
+              f"R/NU/C {r['harmful_label_refused_pct']}/{r['harmful_label_not_understood_pct']}/{r['harmful_label_complied_pct']} | "
+              f"S ref {r['harmless_wrong_refusal_pct']} "
+              f"R/NU/C {r['harmless_label_refused_pct']}/{r['harmless_label_not_understood_pct']}/{r['harmless_label_complied_pct']}")
 
 
 if __name__ == "__main__":

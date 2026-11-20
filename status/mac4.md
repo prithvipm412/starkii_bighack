@@ -1,6 +1,8 @@
 # Mac4 status
 
 Done:
+- Baseline translator = NLLB-200-distilled-600M kn->en (local, offline; same settings as pipeline/score.py). Pilot baseline complete (400 rows): harmful flagged en 49/50, kn 45/50, kn_mix 46/50, kn_latn (untranslated) 21/50; harmless flagged en 6, kn 4, kn_mix 3, kn_latn 1 /50. Median latency: en 177 ms, kn 424, kn_mix 404, kn_latn 113.
+- summarize.py v2: adds run (main | pilot64 ...), scope (all | pilot ids only), harmful_compliance %, and label breakdown (refused / not_understood / complied %) per split.
 - analysis/FINDINGS.md draft (numbers only, pilot): gap per model (Qwen, Gemma), Llama Guard en/kn_latn, projections, gated vs always, failure analysis. PENDING: Llama-3.2, Guard kn/kn_mix, full set, handlabels, translation check.
 - analysis/scorer_check.py -> analysis/scorer_check.csv (once handlabels exist). Per model x variant (+ALL): n, accuracy of pipeline `refused` vs human, refused rates, confusion (pipeline refused/not x human refused / not_understood / complied_other), unmatched. Tested on synthetic labels.
   HANDLABELS FORMAT (mac1-3, results/macN/handlabels.csv, no text): prompt_id,variant,condition,human_label with human_label = refused | complied | not_understood. The old prompt_id,condition,human_refused format also works (variant defaults to en).
@@ -23,9 +25,8 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: waiting on a local kn->en translator (NLLB from mac1) to finish the Guard pilot, then the full baseline. scorer_check waits on handlabels.
+Doing: full baseline (1800 rows) in the background, resumable, pushed every 30 min. FINDINGS update with rescored Qwen.
 
-Blocked:
-- Baseline kn/kn_mix (200 pilot rows + the full run): Google kn->en now returns HTTP 429 to this Mac's Python client (rate limit after ~1800 build calls). Proposed fix: mac1 AirDrops its NLLB-200-distilled-600M cache, and the baseline uses NLLB (the same translator as mac1's scorer).
+Blocked: scorer_check waits on handlabels.
 
 Next: build pilot.jsonl/full.jsonl -> check 20 translations -> prompts.zip + shasum -> pilot baseline.
