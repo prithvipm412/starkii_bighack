@@ -1,0 +1,11 @@
+.venv/
+__pycache__/
+models/
+outputs/
+logs/
+data_tools/output/
+*.safetensors
+*.bin
+*.pt
+.DS_Store
+node_modules/
