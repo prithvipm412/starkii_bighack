@@ -8,11 +8,15 @@ Done:
 
 - Removed two temporary download folders and the incomplete Gemma cache shard. The completed checkpoint remains cached.
 - Extracted the Gemma direction on MPS with bf16 from 64 harmful and 64 harmless English rows. Chosen layer **16**, alpha **176.0623**, tau **-13.6028**, Cohen's d **7.61**. Metadata is in `results/mac3/gemma-2-2b-it_direction.json`.
+- Finished the 400-row, 100-prompt-ID pilot in order: `none`, `steer_gated`, `steer_always`. Verified each result and gate CSV covers all 400 prompt/variant pairs.
+- First 20 baseline rows averaged 95.2 rows/min. Generation took 214 s for `none`, 214 s for `steer_gated`, and 252 s for `steer_always`.
+- Phrase-based refusal counts (harmful / harmless, each out of 200): `none` 105 / 36, `steer_gated` 183 / 106, `steer_always` 198 / 198. The gate activated on 230 of 400 rows.
+- Added 20 manual refusal labels for English replies, with 10 harmful and 10 harmless examples across all three conditions. `handlabels.csv` contains only prompt IDs, conditions, and binary labels.
 
 Doing:
-- Waiting for `data_tools/output/pilot.jsonl` (checking every 30 seconds).
 
 Blocked:
+- Llama Guard is gated for the current Hugging Face account, so all `judge_score` values are blank. NLLB loaded as the translation fallback.
 
 Next:
-- Run the Gemma pilot with `--conditions none` and `HF_HUB_ETAG_TIMEOUT=10`, with `HF_HUB_OFFLINE` unset.
+- Rescore after Llama Guard access is available. Full run and sweep after Mac1 provides inputs and instructions.
