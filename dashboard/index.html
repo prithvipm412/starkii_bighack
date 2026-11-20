@@ -44,7 +44,7 @@ h1,h2,h3{font-weight:600;line-height:1.2}
 #header h1{font-size:1.4rem;letter-spacing:.03em;color:#fff}
 #header .hypothesis{
   font-size:.82rem;color:var(--text-muted);margin-top:.15rem;
-  max-width:52ch;line-height:1.4;
+  max-width:54ch;line-height:1.4;
 }
 .sample-badge{
   display:none;background:#f97316;color:#fff;font-size:.68rem;font-weight:700;
@@ -110,7 +110,66 @@ h1,h2,h3{font-weight:600;line-height:1.2}
   font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:4px;
   background:var(--navy-600);color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
 }
-.chart-wrap{position:relative;height:280px}
+.chart-wrap{position:relative;height:300px}
+
+/* ── Kannada Gap Tiles ──────────────────────────────────── */
+.gap-tiles-wrap{
+  display:grid;
+  grid-template-columns:repeat(auto-fit, minmax(280px, 1fr));
+  gap:1rem;
+}
+.gap-tile{
+  background:linear-gradient(145deg, var(--navy-800), #101c56);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:1.1rem 1.25rem;
+  display:flex;flex-direction:column;gap:.55rem;
+  position:relative;
+  overflow:hidden;
+}
+.gap-tile::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:linear-gradient(90deg, var(--accent-warn), var(--accent));
+}
+.gap-tile-header{
+  display:flex;justify-content:space-between;align-items:center;
+}
+.gap-model-name{
+  font-weight:700;font-size:.86rem;color:#fff;
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+}
+.gap-val-row{
+  display:flex;align-items:baseline;gap:.5rem;margin:.2rem 0;
+}
+.gap-val{
+  font-size:2rem;font-weight:800;color:var(--accent-warn);
+  line-height:1;letter-spacing:-.02em;
+}
+.gap-unit{
+  font-size:.85rem;font-weight:700;color:var(--text-muted);
+}
+.gap-meta{
+  font-size:.76rem;color:var(--text-muted);display:flex;flex-direction:column;gap:.25rem;
+}
+.gap-rates{
+  display:flex;gap:.6rem;align-items:center;
+}
+.gap-rate-badge{
+  background:var(--navy-700);border-radius:4px;padding:.15rem .45rem;
+  font-size:.72rem;font-weight:600;
+}
+.gap-rate-badge.en{color:var(--accent)}
+.gap-rate-badge.kn{color:var(--accent-warn)}
+
+/* ── Dual Steering Grid ─────────────────────────────────── */
+.steering-grid{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:1.2rem;
+}
+@media(max-width:960px){
+  .steering-grid{grid-template-columns:1fr;}
+}
 
 /* ── Table ───────────────────────────────────────────────── */
 .tbl-wrap{overflow-x:auto;border-radius:8px}
@@ -192,54 +251,81 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
   <select id="f-category"><option value="all">All categories</option></select>
 </div>
 
-<!-- ── VIEWS ───────────────────────────────────────────────── -->
+<!-- ── MAIN CONTENT ────────────────────────────────────────── -->
 <main id="main">
 
-  <!-- V1: The Gap -->
+  <!-- REQUIREMENT 2: Kannada Gap Tiles per Model -->
   <div class="card full-width">
     <div class="card-title">
-      <span>📊</span> View 1 — The Gap
-      <span class="tag">headline</span>
+      <span>📉</span> Kannada Gap by Model
+      <span class="tag">key metric</span>
     </div>
-    <p style="font-size:.8rem;color:var(--text-muted)">
-      Harmful-prompt refusal rate by variant, grouped by model (condition = none).
-      Lower bars reveal the safety gap for non-English inputs.
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:-.3rem">
+      Safety drop: English refusal rate minus the lowest among Kannada variants (<code>kn</code>, <code>kn_latn</code>, <code>kn_mix</code>) for <code>condition=none</code> (harmful prompts).
+    </p>
+    <div class="gap-tiles-wrap" id="kannada-gap-tiles">
+      <div class="state"><div class="spinner"></div></div>
+    </div>
+  </div>
+
+  <!-- REQUIREMENT 1 & 4: Headline Chart (The Gap) with Wilson 95% CI & n -->
+  <div class="card full-width">
+    <div class="card-title">
+      <span>📊</span> View 1 — The Gap (Refusal Rate by Variant)
+      <span class="tag">headline chart</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:-.3rem">
+      Harmful-prompt refusal rate (% of rows with <code>refused=1</code>) by variant, grouped by model for <code>condition=none</code>.
+      Thin error bars denote <strong>95% Wilson confidence intervals</strong>; sample count <code>n</code> is displayed under each bar.
     </p>
     <div class="chart-wrap"><canvas id="chart-gap"></canvas></div>
   </div>
 
-  <!-- V2: The Fix -->
+  <!-- REQUIREMENT 3 & 4: Steering Chart (Harmful vs Harmless over-refusal check) -->
   <div class="card full-width">
     <div class="card-title">
-      <span>🛡️</span> View 2 — The Fix
-      <span class="tag">key result</span>
+      <span>🛡️</span> View 2 — Steering: Safety vs Over-Refusal Check
+      <span class="tag">steering evaluation</span>
     </div>
-    <p style="font-size:.8rem;color:var(--text-muted)">
-      Harmful refusal rate (↑ good) and harmless wrong-refusal rate (↓ good) per condition.
-      Filtered by model, variant &amp; category above.
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:-.3rem">
+      Refusal rates across defense conditions (<code>none</code> vs <code>steer_always</code> vs <code>steer_gated</code> vs <code>baseline</code>) with 95% Wilson CIs.
+      Harmful split measures safety recovery (↑); Harmless split tests for false refusals (↓).
     </p>
-    <div class="chart-wrap"><canvas id="chart-fix"></canvas></div>
+    <div class="steering-grid">
+      <div>
+        <div style="font-size:.84rem;font-weight:700;color:var(--accent-2);margin-bottom:.5rem">
+          Harmful Prompts: Refusal Rate (↑ Target: High)
+        </div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmful"></canvas></div>
+      </div>
+      <div>
+        <div style="font-size:.84rem;font-weight:700;color:var(--accent-warn);margin-bottom:.5rem">
+          Harmless Prompts: Over-Refusal Rate (↓ Target: Low)
+        </div>
+        <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmless"></canvas></div>
+      </div>
+    </div>
   </div>
 
-  <!-- V3: Latency -->
+  <!-- VIEW 3: Cost / Latency -->
   <div class="card">
     <div class="card-title">
       <span>⏱️</span> View 3 — Cost: Median Latency
       <span class="tag">perf</span>
     </div>
-    <p style="font-size:.8rem;color:var(--text-muted)">Median latency (ms) per condition.</p>
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:-.3rem">Median latency (ms) per condition across models.</p>
     <div class="chart-wrap" style="height:220px"><canvas id="chart-lat"></canvas></div>
   </div>
 
-  <!-- V4: Where it fails -->
+  <!-- VIEW 4: Where It Fails -->
   <div class="card">
     <div class="card-title">
       <span>🔍</span> View 4 — Where It Still Fails
-      <span class="tag">analysis</span>
+      <span class="tag">failure analysis</span>
     </div>
-    <p style="font-size:.8rem;color:var(--text-muted)">
+    <p style="font-size:.8rem;color:var(--text-muted);margin-top:-.3rem">
       Category × variant cells where <code>steer_gated</code> has the
-      <em>lowest</em> refusal rate across all conditions (harmful split only).
+      <em>lowest</em> refusal rate across conditions (harmful split).
     </p>
     <div class="tbl-wrap"><div id="tbl-fails"></div></div>
   </div>
@@ -252,7 +338,6 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
 // ═══════════════════════════════════════════════════════════════════
 const SAMPLE_CSV = 'sample/results_sample.csv';
 
-// Real results dirs (relative to dashboard/index.html)
 const REAL_DIRS = [
   '../results/mac1/',
   '../results/mac2/',
@@ -261,11 +346,9 @@ const REAL_DIRS = [
 ];
 
 // Exact required header — CSVs with any other header are silently skipped.
-// Covers handlabels.csv, translation_check.csv, sweep_*.csv, etc.
 const REQUIRED_HEADER =
   'prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit';
 
-// Short model names (what the pipeline writes into the model column)
 const KNOWN_MODELS = [
   'qwen2.5-3b-instruct',
   'llama-3.2-3b-instruct',
@@ -299,6 +382,87 @@ Chart.defaults.borderColor = '#1e2f6b';
 Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
 
 // ═══════════════════════════════════════════════════════════════════
+// WILSON 95% CONFIDENCE INTERVAL & ERROR BAR PLUGIN
+// ═══════════════════════════════════════════════════════════════════
+
+/**
+ * Wilson score interval with continuity approximation for binomial proportions.
+ * Formula: (p + z^2/(2n) +/- z*sqrt((p(1-p)/n + z^2/(4n^2)))) / (1 + z^2/n)
+ * z = 1.95996 for 95% confidence interval.
+ */
+function wilsonCI(k, n, z = 1.95996) {
+  if (n <= 0) return { p: 0, low: 0, high: 0, n: 0, k: 0 };
+  const p = k / n;
+  const z2 = z * z;
+  const denom = 1 + z2 / n;
+  const center = (p + z2 / (2 * n)) / denom;
+  const factor = (z / denom) * Math.sqrt((p * (1 - p)) / n + z2 / (4 * n * n));
+  const low = Math.max(0, center - factor);
+  const high = Math.min(1, center + factor);
+  return {
+    p: +(p * 100).toFixed(1),
+    low: +(low * 100).toFixed(1),
+    high: +(high * 100).toFixed(1),
+    n,
+    k
+  };
+}
+
+/**
+ * Custom Chart.js plugin to render thin Wilson 95% CI error bars and 'n' under bars.
+ */
+const wilsonErrorBarPlugin = {
+  id: 'wilsonErrorBars',
+  afterDatasetsDraw(chart) {
+    const { ctx, scales: { y } } = chart;
+    if (!y) return;
+    ctx.save();
+
+    chart.data.datasets.forEach((dataset, datasetIndex) => {
+      const meta = chart.getDatasetMeta(datasetIndex);
+      if (!meta || meta.hidden) return;
+
+      meta.data.forEach((bar, index) => {
+        const ci = dataset.ciData && dataset.ciData[index];
+        if (!ci || !ci.n) return;
+
+        const x = bar.x;
+        const yLow = y.getPixelForValue(ci.low);
+        const yHigh = y.getPixelForValue(ci.high);
+
+        // 1. Draw thin vertical error bar
+        ctx.strokeStyle = '#f1f5f9';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(x, yLow);
+        ctx.lineTo(x, yHigh);
+
+        // Whiskers / caps
+        const capW = Math.max(3, Math.min(6, (bar.width || 14) * 0.3));
+        ctx.moveTo(x - capW, yHigh);
+        ctx.lineTo(x + capW, yHigh);
+        ctx.moveTo(x - capW, yLow);
+        ctx.lineTo(x + capW, yLow);
+        ctx.stroke();
+
+        // 2. Draw n under each bar (if enabled)
+        if (dataset.showN || chart.options.showNUnderBars) {
+          const yBase = (bar.base !== undefined) ? bar.base : y.getPixelForValue(0);
+          ctx.fillStyle = '#8898cc';
+          ctx.font = '600 9px "Segoe UI", system-ui, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'top';
+          ctx.fillText(`n=${ci.n}`, x, yBase + 3);
+        }
+      });
+    });
+
+    ctx.restore();
+  }
+};
+Chart.register(wilsonErrorBarPlugin);
+
+// ═══════════════════════════════════════════════════════════════════
 // STATE
 // ═══════════════════════════════════════════════════════════════════
 let allData = [];
@@ -325,7 +489,6 @@ async function setMode(m) {
     allData = m === 'sample'
       ? await loadValidatedCSV(SAMPLE_CSV)
       : await loadRealCSVs();
-    // Badge: show when sample, hide when real data loaded successfully
     document.getElementById('sample-badge').classList.toggle('show', m === 'sample');
     populateFilters();
     updateStatusBar();
@@ -340,7 +503,6 @@ async function setMode(m) {
 // CSV LOADERS
 // ═══════════════════════════════════════════════════════════════════
 
-/** Fetch + PapaParse one CSV. Rejects on network/parse error. */
 function fetchCSV(url) {
   return new Promise((res, rej) => {
     const tid = setTimeout(() => rej(new Error('timeout')), 15000);
@@ -352,7 +514,6 @@ function fetchCSV(url) {
   });
 }
 
-/** Load + validate header. Throws if header doesn't match exactly. */
 async function loadValidatedCSV(url) {
   const result = await fetchCSV(url);
   const fields = result.meta && result.meta.fields
@@ -364,28 +525,17 @@ async function loadValidatedCSV(url) {
   return result.data || [];
 }
 
-/**
- * Try to load one CSV silently:
- * - returns [] if file missing (404), network error, or header mismatch.
- * - never throws.
- */
 async function tryLoadCSV(url) {
   try {
     const result = await fetchCSV(url);
     const fields = result.meta && result.meta.fields
       ? result.meta.fields.join(',')
       : '';
-    if (fields !== REQUIRED_HEADER) return [];   // wrong schema — skip silently
+    if (fields !== REQUIRED_HEADER) return [];
     return result.data || [];
   } catch(_) { return []; }
 }
 
-/**
- * Discover CSVs in a directory by fetching its index page and parsing <a href> links.
- * Python http.server emits:  <li><a href="filename.csv">filename.csv</a></li>
- * The href is a URL-encoded bare filename (no path prefix, no leading slash).
- * Falls back to [] if the server doesn't expose directory listings or returns non-200.
- */
 async function listDirCSVs(dirUrl) {
   try {
     const ctrl = new AbortController();
@@ -394,30 +544,19 @@ async function listDirCSVs(dirUrl) {
     clearTimeout(tid);
     if (!resp.ok) return [];
     const html = await resp.text();
-    // Match href="<anything>.csv" — capture the raw (possibly URL-encoded) href value.
-    // Filter out absolute URLs (/..., http://...) which are nav links, not files.
     const csvRefs = [...html.matchAll(/href="([^"?#]+\.csv)"/gi)]
       .map(m => m[1])
       .filter(ref => !ref.startsWith('http') && !ref.startsWith('/') && !ref.startsWith('?'));
-    // Build full URLs. Keep href percent-encoded as-is — browsers resolve it correctly.
     return csvRefs.map(ref => dirUrl + ref);
   } catch(_) { return []; }
 }
 
 async function loadRealCSVs() {
   const urlSet = new Set();
-
-  // ── Pass 1: directory-listing discovery (primary, model-name-agnostic) ──────────
-  // Python http.server exposes a browseable listing — we parse every *.csv href.
-  // This catches any filename the pipeline produces, now or in the future.
   const listings = await Promise.all(REAL_DIRS.map(d => listDirCSVs(d)));
   listings.forEach(urls => urls.forEach(u => urlSet.add(u)));
 
-  // ── Pass 2: pattern-based fallback (for servers without directory listing) ────────
-  // Per AGENTS.md the pipeline writes <model>_<condition>.csv.
-  // KNOWN_MODELS only used here as a fallback when listing returns nothing.
-  const listedCount = urlSet.size;
-  if (listedCount === 0) {
+  if (urlSet.size === 0) {
     for (const dir of REAL_DIRS) {
       for (const mdl of KNOWN_MODELS) {
         for (const cond of CONDITIONS) {
@@ -427,14 +566,13 @@ async function loadRealCSVs() {
     }
   }
 
-  // ── Pass 3: load, validate header, skip mismatches silently ──────────────────────
   const batches = await Promise.all([...urlSet].map(url => tryLoadCSV(url)));
   const rows = batches.flat();
 
   if (!rows.length) {
     throw new Error(
       'No matching CSVs found in results/mac1–mac4/. ' +
-      'Expected files named <model>_<condition>.csv with header:\n' +
+      'Expected files with header:\n' +
       REQUIRED_HEADER + '\n' +
       'Switch to "Pilot (sample)" to use sample data.'
     );
@@ -443,13 +581,12 @@ async function loadRealCSVs() {
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STATUS BAR  — last-updated time + per-model row counts
+// STATUS BAR
 // ═══════════════════════════════════════════════════════════════════
 function updateStatusBar() {
   const now = new Date();
   const timeStr = now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
 
-  // Count rows per model across the full (unfiltered) dataset
   const counts = {};
   for (const row of allData) {
     counts[row.model] = (counts[row.model] || 0) + 1;
@@ -511,15 +648,91 @@ function applyFilters(data, {model, variant, category}) {
 // ═══════════════════════════════════════════════════════════════════
 function render() {
   clearLoadingSpinners();
-  const f        = getFilters();
+  const f = getFilters();
   const filtered = applyFilters(allData, f);
+
+  renderKannadaGapTiles(allData, f);
   renderGap(filtered);
-  renderFix(filtered);
+  renderSteering(filtered);
   renderLatency(filtered);
   renderFailsTable(filtered);
 }
 
-// ── VIEW 1: The Gap ───────────────────────────────────────────────
+// ── REQUIREMENT 2: Kannada Gap Tiles ──────────────────────────────
+function renderKannadaGapTiles(data, filters) {
+  const container = document.getElementById('kannada-gap-tiles');
+  const harmfulNone = data.filter(r =>
+    r.split === 'harmful' &&
+    r.condition === 'none' &&
+    (filters.category === 'all' || r.category === filters.category)
+  );
+
+  let targetModels = [...new Set(harmfulNone.map(r => r.model))].sort();
+  if (filters.model !== 'all') {
+    targetModels = targetModels.filter(m => m === filters.model);
+  }
+
+  if (!targetModels.length) {
+    container.innerHTML = '<div class="state" style="grid-column:1/-1;min-height:90px">No harmful prompts found with condition=none.</div>';
+    return;
+  }
+
+  const knVariants = ['kn', 'kn_latn', 'kn_mix'];
+  let html = '';
+
+  targetModels.forEach(m => {
+    const mRows = harmfulNone.filter(r => r.model === m);
+    const enRows = mRows.filter(r => r.variant === 'en');
+    const enRef = enRows.filter(r => r.refused === 1).length;
+    const enCI = wilsonCI(enRef, enRows.length);
+
+    let lowestVar = null;
+    let lowestCI = null;
+
+    knVariants.forEach(v => {
+      const vRows = mRows.filter(r => r.variant === v);
+      if (vRows.length > 0) {
+        const vRef = vRows.filter(r => r.refused === 1).length;
+        const ci = wilsonCI(vRef, vRows.length);
+        if (lowestCI === null || ci.p < lowestCI.p) {
+          lowestCI = ci;
+          lowestVar = v;
+        }
+      }
+    });
+
+    if (enRows.length === 0 || lowestCI === null) return;
+
+    const gap = +(enCI.p - lowestCI.p).toFixed(1);
+
+    html += `
+      <div class="gap-tile">
+        <div class="gap-tile-header">
+          <span class="gap-model-name">${m}</span>
+          <span class="tag" style="background:rgba(249,115,22,.15);color:var(--accent-warn)">Gap</span>
+        </div>
+        <div class="gap-val-row">
+          <span class="gap-val">+${gap}</span>
+          <span class="gap-unit">percentage points</span>
+        </div>
+        <div class="gap-meta">
+          <div class="gap-rates">
+            <span class="gap-rate-badge en">EN: ${enCI.p}% [${enCI.low}–${enCI.high}%]</span>
+            <span style="color:var(--text-muted)">→</span>
+            <span class="gap-rate-badge kn">${lowestVar}: ${lowestCI.p}% [${lowestCI.low}–${lowestCI.high}%]</span>
+          </div>
+          <div style="font-size:.7rem;color:var(--text-muted);margin-top:.2rem">
+            Sample: n=${enCI.n} (EN), n=${lowestCI.n} (${lowestVar})
+          </div>
+        </div>
+      </div>
+    `;
+  });
+
+  container.innerHTML = html || '<div class="state" style="grid-column:1/-1;min-height:90px">No gap data available.</div>';
+}
+
+// ── REQUIREMENT 1 & 4: The Gap (Headline chart) ───────────────────
 function renderGap(data) {
   const models  = [...new Set(data.map(r => r.model))].sort();
   const harmful = data.filter(r => r.split === 'harmful' && r.condition === 'none');
@@ -528,59 +741,148 @@ function renderGap(data) {
     return showChartEmpty('chart-gap', 'No data for condition=none, split=harmful');
   }
 
-  const datasets = VARIANTS.map(v => ({
-    label: v,
-    data: models.map(m => {
+  const datasets = VARIANTS.map(v => {
+    const ciArray = models.map(m => {
       const rows = harmful.filter(r => r.model === m && r.variant === v);
-      return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
-    }),
-    backgroundColor: PALETTE[v] + 'cc',
-    borderColor:     PALETTE[v],
-    borderWidth: 1, borderRadius: 5,
-  }));
+      const k = rows.filter(r => r.refused === 1).length;
+      return wilsonCI(k, rows.length);
+    });
+
+    return {
+      label: v,
+      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
+      ciData: ciArray,
+      showN: true, // Display n under each bar
+      backgroundColor: PALETTE[v] + 'cc',
+      borderColor:     PALETTE[v],
+      borderWidth: 1,
+      borderRadius: 5,
+    };
+  });
 
   buildChart('chart-gap', 'bar', {labels: models, datasets}, {
+    showNUnderBars: true,
+    layout: { padding: { bottom: 12 } },
     scales: {
-      y: {min:0, max:100, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Refusal rate (harmful)'}},
-      x: {title:{display:true,text:'Model'}},
+      y: {
+        min: 0, max: 100,
+        ticks: { callback: v => v + '%' },
+        title: { display: true, text: 'Refusal rate (harmful)' }
+      },
+      x: {
+        title: { display: true, text: 'Model' },
+        ticks: { padding: 18 } // Space for 'n=...' between axis and model labels
+      },
     },
     plugins: {
-      legend: {position:'top'},
-      tooltip: {callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}},
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: c => {
+            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
+            if (ci && ci.n > 0) {
+              return ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n}, refused=${ci.k})`;
+            }
+            return ` ${c.dataset.label}: ${c.parsed.y}%`;
+          }
+        }
+      },
     },
   });
 }
 
-// ── VIEW 2: The Fix ───────────────────────────────────────────────
-function renderFix(data) {
-  const harmful  = data.filter(r => r.split === 'harmful');
+// ── REQUIREMENT 3 & 4: Steering (Harmful vs Harmless over-refusal) ─
+function renderSteering(data) {
+  const models = [...new Set(data.map(r => r.model))].sort();
+  const harmful = data.filter(r => r.split === 'harmful');
   const harmless = data.filter(r => r.split === 'harmless');
 
-  const harmRef  = CONDITIONS.map(c => {
-    const rows = harmful.filter(r => r.condition === c);
-    return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
-  });
-  const wrongRef = CONDITIONS.map(c => {
-    const rows = harmless.filter(r => r.condition === c);
-    return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
+  // Chart 2A: Harmful Prompts (Refusal Rate ↑)
+  const harmfulDatasets = CONDITIONS.map(cond => {
+    const ciArray = models.map(m => {
+      const rows = harmful.filter(r => r.model === m && r.condition === cond);
+      const k = rows.filter(r => r.refused === 1).length;
+      return wilsonCI(k, rows.length);
+    });
+
+    return {
+      label: COND_LABELS[cond],
+      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
+      ciData: ciArray,
+      showN: true,
+      backgroundColor: PALETTE[cond] + 'cc',
+      borderColor:     PALETTE[cond],
+      borderWidth: 1,
+      borderRadius: 5,
+    };
   });
 
-  buildChart('chart-fix', 'bar',
-    {
-      labels: CONDITIONS.map(c => COND_LABELS[c]),
-      datasets: [
-        {label:'Harmful refusal ↑',           data:harmRef,  backgroundColor:COND_COLORS.map(c=>c+'bb'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5},
-        {label:'Wrong refusal on harmless ↓',  data:wrongRef, backgroundColor:COND_COLORS.map(c=>c+'33'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5},
-      ],
+  buildChart('chart-steering-harmful', 'bar', {labels: models, datasets: harmfulDatasets}, {
+    showNUnderBars: true,
+    layout: { padding: { bottom: 10 } },
+    scales: {
+      y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Harmful refusal (%)' } },
+      x: { ticks: { padding: 18 } }
     },
-    {
-      scales: {y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Rate (%)'}}},
-      plugins: {
-        legend: {position:'top'},
-        tooltip: {callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}},
-      },
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: c => {
+            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
+            if (ci && ci.n > 0) {
+              return ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n})`;
+            }
+            return ` ${c.dataset.label}: ${c.parsed.y}%`;
+          }
+        }
+      }
     }
-  );
+  });
+
+  // Chart 2B: Harmless Prompts (Over-refusal Check ↓)
+  const harmlessDatasets = CONDITIONS.map(cond => {
+    const ciArray = models.map(m => {
+      const rows = harmless.filter(r => r.model === m && r.condition === cond);
+      const k = rows.filter(r => r.refused === 1).length;
+      return wilsonCI(k, rows.length);
+    });
+
+    return {
+      label: COND_LABELS[cond],
+      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
+      ciData: ciArray,
+      showN: true,
+      backgroundColor: PALETTE[cond] + '66',
+      borderColor:     PALETTE[cond],
+      borderWidth: 1.5,
+      borderDash: [3, 2],
+      borderRadius: 5,
+    };
+  });
+
+  buildChart('chart-steering-harmless', 'bar', {labels: models, datasets: harmlessDatasets}, {
+    showNUnderBars: true,
+    layout: { padding: { bottom: 10 } },
+    scales: {
+      y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Harmless wrong-refusal (%)' } },
+      x: { ticks: { padding: 18 } }
+    },
+    plugins: {
+      legend: { position: 'top' },
+      tooltip: {
+        callbacks: {
+          label: c => {
+            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
+            if (ci && ci.n > 0) {
+              return ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n})`;
+            }
+            return ` ${c.dataset.label}: ${c.parsed.y}%`;
+          }
+        }
+      }
+    }
+  });
 }
 
 // ── VIEW 3: Latency ───────────────────────────────────────────────
@@ -614,7 +916,6 @@ function renderLatency(data) {
 // ── VIEW 4: Where it fails ────────────────────────────────────────
 function renderFailsTable(data) {
   const harmful = data.filter(r => r.split === 'harmful');
-  // Categories come from the data — never hard-coded
   const cats = [...new Set(harmful.map(r => r.category))].sort();
   const vars = VARIANTS.filter(v => harmful.some(r => r.variant === v));
 
@@ -701,7 +1002,6 @@ function showChartEmpty(id, msg) {
 // LOADING / ERROR STATES
 // ═══════════════════════════════════════════════════════════════════
 function showLoading() {
-  // Destroy charts before wiping DOM
   Object.keys(charts).forEach(id => { if(charts[id]){charts[id].destroy();delete charts[id];} });
   document.querySelectorAll('.chart-wrap').forEach(w => {
     const cid = w.querySelector('canvas')?.id;
@@ -709,6 +1009,8 @@ function showLoading() {
       ? `<div class="state"><div class="spinner"></div><span>Loading…</span></div><canvas id="${cid}" style="display:none"></canvas>`
       : `<div class="state"><div class="spinner"></div><span>Loading…</span></div>`;
   });
+  document.getElementById('kannada-gap-tiles').innerHTML =
+    '<div class="state" style="grid-column:1/-1;min-height:90px"><div class="spinner"></div></div>';
   document.getElementById('tbl-fails').innerHTML =
     '<div class="state"><div class="spinner"></div></div>';
   document.getElementById('status-pills').innerHTML = '<em>loading…</em>';
@@ -735,8 +1037,9 @@ function showError(msg) {
 // ═══════════════════════════════════════════════════════════════════
 // UTILS
 // ═══════════════════════════════════════════════════════════════════
-function mean(arr)   { return arr.reduce((a,b) => a+b, 0) / arr.length; }
+function mean(arr)   { return arr.length ? arr.reduce((a,b) => a+b, 0) / arr.length : 0; }
 function median(arr) {
+  if (!arr.length) return 0;
   const m = Math.floor(arr.length / 2);
   return arr.length % 2 ? arr[m] : (arr[m-1]+arr[m]) / 2;
 }
