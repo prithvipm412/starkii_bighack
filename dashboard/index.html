@@ -29,7 +29,8 @@
 html{font-size:16px;scroll-behavior:smooth}
 body{background:var(--navy-900);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
 h1,h2,h3{font-weight:600;line-height:1.2}
-/* ── Header ──────────────────────────────────────────────── */
+
+/* ── Header ─────────────────────────────────────────────── */
 #header{
   background:linear-gradient(135deg,var(--navy-800),var(--navy-700));
   border-bottom:1px solid var(--border);
@@ -40,32 +41,46 @@ h1,h2,h3{font-weight:600;line-height:1.2}
   backdrop-filter:blur(6px);
 }
 #header .brand{display:flex;align-items:center;gap:.7rem}
-#header .brand svg{opacity:.9}
 #header h1{font-size:1.4rem;letter-spacing:.03em;color:#fff}
 #header .hypothesis{
   font-size:.82rem;color:var(--text-muted);margin-top:.15rem;
-  max-width:48ch;line-height:1.4;
+  max-width:52ch;line-height:1.4;
 }
+.sample-badge{
+  display:none;background:#f97316;color:#fff;font-size:.68rem;font-weight:700;
+  padding:.18rem .5rem;border-radius:4px;letter-spacing:.08em;
+  vertical-align:middle;margin-left:.35rem;
+}
+.sample-badge.show{display:inline-block}
+
 /* data-mode toggle */
-#toggle-wrap{display:flex;align-items:center;gap:.5rem}
+#toggle-wrap{display:flex;align-items:center;gap:.5rem;flex-shrink:0}
 #toggle-wrap label{font-size:.78rem;color:var(--text-muted)}
-.toggle-btn{
-  display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;
-}
+.toggle-btn{display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden}
 .toggle-btn button{
   padding:.38rem .9rem;font-size:.8rem;background:transparent;color:var(--text-muted);
   border:none;cursor:pointer;transition:background var(--transition),color var(--transition);
 }
 .toggle-btn button.active{background:var(--accent);color:#fff}
-.sample-badge{
-  display:none;background:#f97316;color:#fff;font-size:.7rem;font-weight:700;
-  padding:.2rem .55rem;border-radius:4px;letter-spacing:.08em;vertical-align:middle;
+
+/* ── Status bar ─────────────────────────────────────────── */
+#statusbar{
+  background:var(--navy-800);border-bottom:1px solid var(--border);
+  padding:.5rem 2rem;display:flex;align-items:center;flex-wrap:wrap;gap:1rem;
+  font-size:.76rem;color:var(--text-muted);
 }
-.sample-badge.show{display:inline-block}
+#statusbar .upd{margin-left:auto;white-space:nowrap}
+.model-pill{
+  display:inline-flex;align-items:center;gap:.3rem;
+  background:var(--navy-700);border:1px solid var(--border);
+  border-radius:4px;padding:.18rem .5rem;font-size:.72rem;
+}
+.model-pill .cnt{color:var(--accent-2);font-weight:700}
+
 /* ── Filters bar ─────────────────────────────────────────── */
 #filters{
   display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;
-  padding:.8rem 2rem;background:var(--navy-800);border-bottom:1px solid var(--border);
+  padding:.7rem 2rem;background:var(--navy-800);border-bottom:1px solid var(--border);
 }
 #filters label{font-size:.78rem;color:var(--text-muted)}
 #filters select{
@@ -74,9 +89,11 @@ h1,h2,h3{font-weight:600;line-height:1.2}
   transition:border-color var(--transition);
 }
 #filters select:hover{border-color:var(--accent)}
+
 /* ── Main layout ─────────────────────────────────────────── */
 #main{padding:1.5rem 2rem;display:grid;gap:1.5rem;
-  grid-template-columns:repeat(auto-fill,minmax(560px,1fr));}
+  grid-template-columns:repeat(auto-fill,minmax(560px,1fr))}
+
 /* ── Cards ───────────────────────────────────────────────── */
 .card{
   background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
@@ -94,7 +111,8 @@ h1,h2,h3{font-weight:600;line-height:1.2}
   background:var(--navy-600);color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
 }
 .chart-wrap{position:relative;height:280px}
-/* ── Table (view 4) ──────────────────────────────────────── */
+
+/* ── Table ───────────────────────────────────────────────── */
 .tbl-wrap{overflow-x:auto;border-radius:8px}
 table{width:100%;border-collapse:collapse;font-size:.82rem}
 thead th{
@@ -110,6 +128,7 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
 .cell-low{color:var(--accent-danger)}
 .cell-mid{color:var(--accent-warn)}
 .cell-hi{color:var(--accent-2)}
+
 /* ── States ──────────────────────────────────────────────── */
 .state{
   display:flex;flex-direction:column;align-items:center;justify-content:center;
@@ -121,14 +140,13 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
   animation:spin .8s linear infinite;
 }
 @keyframes spin{to{transform:rotate(360deg)}}
+
 /* ── Responsive ──────────────────────────────────────────── */
 @media(max-width:680px){
   #main{grid-template-columns:1fr;padding:1rem}
   #header{padding:.8rem 1rem}
-  #filters{padding:.6rem 1rem}
+  #filters,#statusbar{padding:.6rem 1rem}
 }
-/* ── Tooltip override ────────────────────────────────────── */
-.chartjs-tooltip{pointer-events:none}
 </style>
 </head>
 <body>
@@ -142,10 +160,10 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
       <circle cx="16" cy="20" r="3" fill="#4f83f7"/>
     </svg>
     <div>
-      <h1>Bhasha Kavach &nbsp;<span class="sample-badge" id="sample-badge">SAMPLE DATA</span></h1>
+      <h1>Bhasha Kavach<span class="sample-badge" id="sample-badge">SAMPLE DATA</span></h1>
       <div class="hypothesis">
-        Hypothesis: Code-switching to Kannada bypasses LLM safety filters&thinsp;—&thinsp;
-        and steer_gated closes that gap without over-refusing harmless queries.
+        Hypothesis: Small open models refuse harmful prompts less in Kannada / Kanglish / code-mixed text —
+        steer_gated closes the gap without over-refusing harmless queries.
       </div>
     </div>
   </div>
@@ -153,10 +171,16 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
     <label>Dataset</label>
     <div class="toggle-btn">
       <button id="btn-sample" class="active" onclick="setMode('sample')">Pilot (sample)</button>
-      <button id="btn-real" onclick="setMode('real')">Full (real CSVs)</button>
+      <button id="btn-real"   onclick="setMode('real')">Full (real CSVs)</button>
     </div>
   </div>
 </header>
+
+<!-- ── STATUS BAR ──────────────────────────────────────────── -->
+<div id="statusbar">
+  <span id="status-pills">—</span>
+  <span class="upd" id="status-upd"></span>
+</div>
 
 <!-- ── FILTERS ─────────────────────────────────────────────── -->
 <div id="filters">
@@ -192,18 +216,18 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
     </div>
     <p style="font-size:.8rem;color:var(--text-muted)">
       Harmful refusal rate (↑ good) and harmless wrong-refusal rate (↓ good) per condition.
-      Filtered by model &amp; variant above.
+      Filtered by model, variant &amp; category above.
     </p>
     <div class="chart-wrap"><canvas id="chart-fix"></canvas></div>
   </div>
 
-  <!-- V3: Cost / Latency -->
+  <!-- V3: Latency -->
   <div class="card">
     <div class="card-title">
       <span>⏱️</span> View 3 — Cost: Median Latency
       <span class="tag">perf</span>
     </div>
-    <p style="font-size:.8rem;color:var(--text-muted)">Median latency (ms) per condition, filtered by model &amp; variant.</p>
+    <p style="font-size:.8rem;color:var(--text-muted)">Median latency (ms) per condition.</p>
     <div class="chart-wrap" style="height:220px"><canvas id="chart-lat"></canvas></div>
   </div>
 
@@ -223,25 +247,46 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
 </main>
 
 <script>
-// ── CONFIG ────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// CONFIG
+// ═══════════════════════════════════════════════════════════════════
 const SAMPLE_CSV = 'sample/results_sample.csv';
-// Real CSVs: results/mac*/  — named <model>_<condition>.csv per AGENTS.md
-// We try a directory listing trick: fetch the directory page and parse hrefs.
-// Falls back to a fixed candidate list for servers that don't expose listings.
-const REAL_DIRS  = ['../results/mac1/','../results/mac2/','../results/mac3/','../results/mac4/'];
 
-// Exact required header — CSVs with any other header are silently skipped
-const REQUIRED_HEADER = 'prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit';
+// Real results dirs (relative to dashboard/index.html)
+const REAL_DIRS = [
+  '../results/mac1/',
+  '../results/mac2/',
+  '../results/mac3/',
+  '../results/mac4/',
+];
 
-const VARIANTS   = ['en','kn','kn_latn','kn_mix'];
-const CONDITIONS = ['none','baseline','steer_always','steer_gated'];
-const COND_LABELS= {'none':'None','baseline':'Baseline','steer_always':'Steer Always','steer_gated':'Steer Gated'};
+// Exact required header — CSVs with any other header are silently skipped.
+// Covers handlabels.csv, translation_check.csv, sweep_*.csv, etc.
+const REQUIRED_HEADER =
+  'prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit';
+
+// Short model names (what the pipeline writes into the model column)
+const KNOWN_MODELS = [
+  'qwen2.5-3b-instruct',
+  'llama-3.2-3b-instruct',
+  'gemma-2-2b-it',
+  'llama-guard-3-1b',
+];
+
+const VARIANTS   = ['en', 'kn', 'kn_latn', 'kn_mix'];
+const CONDITIONS = ['none', 'baseline', 'steer_always', 'steer_gated'];
+const COND_LABELS = {
+  none:        'None',
+  baseline:    'Baseline',
+  steer_always:'Steer Always',
+  steer_gated: 'Steer Gated',
+};
 
 const PALETTE = {
-  en:       '#4f83f7',
-  kn:       '#38d9b4',
-  kn_latn:  '#f97316',
-  kn_mix:   '#a78bfa',
+  en:          '#4f83f7',
+  kn:          '#38d9b4',
+  kn_latn:     '#f97316',
+  kn_mix:      '#a78bfa',
   none:        '#4f83f7',
   baseline:    '#38d9b4',
   steer_always:'#f97316',
@@ -249,172 +294,213 @@ const PALETTE = {
 };
 const COND_COLORS = CONDITIONS.map(c => PALETTE[c]);
 
-Chart.defaults.color = '#8898cc';
+Chart.defaults.color       = '#8898cc';
 Chart.defaults.borderColor = '#1e2f6b';
 Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
 
-// ── STATE ─────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════════════════
 let allData = [];
 let mode    = 'sample';
 let charts  = {};
 
-// ── BOOT ──────────────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// BOOT
+// ═══════════════════════════════════════════════════════════════════
 document.getElementById('f-model').addEventListener('change', render);
 document.getElementById('f-variant').addEventListener('change', render);
 document.getElementById('f-category').addEventListener('change', render);
 setMode('sample');
 
-// ── MODE SWITCH ────────────────────────────────────────────────────
-async function setMode(m){
+// ═══════════════════════════════════════════════════════════════════
+// MODE SWITCH
+// ═══════════════════════════════════════════════════════════════════
+async function setMode(m) {
   mode = m;
-  document.getElementById('btn-sample').classList.toggle('active', m==='sample');
-  document.getElementById('btn-real').classList.toggle('active', m==='real');
-  document.getElementById('sample-badge').classList.toggle('show', m==='sample');
+  document.getElementById('btn-sample').classList.toggle('active', m === 'sample');
+  document.getElementById('btn-real').classList.toggle('active',   m === 'real');
   showLoading();
-  try{
-    if(m==='sample'){
-      allData = await loadValidatedCSV(SAMPLE_CSV);
-    } else {
-      allData = await loadRealCSVs();
-    }
+  try {
+    allData = m === 'sample'
+      ? await loadValidatedCSV(SAMPLE_CSV)
+      : await loadRealCSVs();
+    // Badge: show when sample, hide when real data loaded successfully
+    document.getElementById('sample-badge').classList.toggle('show', m === 'sample');
     populateFilters();
+    updateStatusBar();
     render();
-  } catch(e){
-    showError('Failed to load data: '+e.message);
+  } catch(e) {
+    document.getElementById('sample-badge').classList.toggle('show', m === 'sample');
+    showError('Failed to load data: ' + e.message);
   }
 }
 
-// ── CSV LOADERS ───────────────────────────────────────────────────
+// ═══════════════════════════════════════════════════════════════════
+// CSV LOADERS
+// ═══════════════════════════════════════════════════════════════════
 
-/** Load one CSV, return parsed rows (PapaParse). Rejects on network/parse error. */
-function fetchCSV(url){
-  return new Promise((res,rej)=>{
-    const tid = setTimeout(()=>rej(new Error('timeout')), 15000);
-    Papa.parse(url,{
+/** Fetch + PapaParse one CSV. Rejects on network/parse error. */
+function fetchCSV(url) {
+  return new Promise((res, rej) => {
+    const tid = setTimeout(() => rej(new Error('timeout')), 15000);
+    Papa.parse(url, {
       download:true, header:true, dynamicTyping:true, skipEmptyLines:true,
       complete: r => { clearTimeout(tid); res(r); },
-      error:    e => { clearTimeout(tid); rej(e); }
+      error:    e => { clearTimeout(tid); rej(e); },
     });
   });
 }
 
-/** Load + validate header. Returns rows or throws if header doesn't match. */
-async function loadValidatedCSV(url){
+/** Load + validate header. Throws if header doesn't match exactly. */
+async function loadValidatedCSV(url) {
   const result = await fetchCSV(url);
-  const fields = (result.meta && result.meta.fields) ? result.meta.fields.join(',') : '';
-  if(fields !== REQUIRED_HEADER){
+  const fields = result.meta && result.meta.fields
+    ? result.meta.fields.join(',')
+    : '';
+  if (fields !== REQUIRED_HEADER) {
     throw new Error(`Header mismatch in ${url}: got "${fields}"`);
   }
-  return result.data;
+  return result.data || [];
 }
 
 /**
- * Try to load a CSV silently: returns [] if file missing, header wrong, or any error.
- * Never throws.
+ * Try to load one CSV silently:
+ * - returns [] if file missing (404), network error, or header mismatch.
+ * - never throws.
  */
-async function tryLoadCSV(url){
+async function tryLoadCSV(url) {
   try {
     const result = await fetchCSV(url);
-    const fields = (result.meta && result.meta.fields) ? result.meta.fields.join(',') : '';
-    if(fields !== REQUIRED_HEADER) return [];   // wrong header — skip silently
+    const fields = result.meta && result.meta.fields
+      ? result.meta.fields.join(',')
+      : '';
+    if (fields !== REQUIRED_HEADER) return [];   // wrong schema — skip silently
     return result.data || [];
-  } catch(_){ return []; }
+  } catch(_) { return []; }
 }
 
 /**
  * Discover CSVs in a directory by fetching its index page and parsing <a href> links.
- * Falls back gracefully to empty list if the server doesn't expose listings.
+ * Falls back to [] if the server doesn't expose directory listings.
  */
-async function listDirCSVs(dirUrl){
-  try{
+async function listDirCSVs(dirUrl) {
+  try {
     const ctrl = new AbortController();
-    const tid  = setTimeout(()=>ctrl.abort(), 5000);
+    const tid  = setTimeout(() => ctrl.abort(), 5000);
     const resp = await fetch(dirUrl, {signal: ctrl.signal});
     clearTimeout(tid);
-    if(!resp.ok) return [];
+    if (!resp.ok) return [];
     const html = await resp.text();
-    // Parse all href="*.csv" references from the directory listing
-    const matches = [...html.matchAll(/href="([^"]+\.csv)"/gi)];
-    return matches
+    // Extract all href="*.csv" that are relative (not absolute URLs)
+    return [...html.matchAll(/href="([^"]+\.csv)"/gi)]
       .map(m => m[1])
       .filter(name => !name.startsWith('http') && !name.startsWith('/'))
-      .map(name => dirUrl + (name.includes('/') ? name : name));
-  } catch(_){ return []; }
+      .map(name => dirUrl + name);
+  } catch(_) { return []; }
 }
 
-async function loadRealCSVs(){
-  const allUrls = new Set();
+async function loadRealCSVs() {
+  const urlSet = new Set();
 
-  // 1. Try directory listing for each mac folder
+  // 1. Try directory listing for each mac results folder
   const listings = await Promise.all(REAL_DIRS.map(d => listDirCSVs(d)));
-  listings.forEach(urls => urls.forEach(u => allUrls.add(u)));
+  listings.forEach(urls => urls.forEach(u => urlSet.add(u)));
 
-  // 2. Also probe pattern-based names as fallback
-  //    Real files are named <model>_<condition>.csv per AGENTS.md
-  const models = [
-    'Qwen2.5-3B-Instruct', 'qwen2.5-3b-instruct',
-    'Llama-3.2-3B-Instruct', 'llama-3.2-3b-instruct',
-    'gemma-2-2b-it',
-    'Llama-Guard-3-1B', 'llama-guard-3-1b',
-  ];
-  const conditions = ['none','baseline','steer_always','steer_gated'];
-  for(const dir of REAL_DIRS){
-    for(const mdl of models){
-      for(const cond of conditions){
-        allUrls.add(`${dir}${mdl}_${cond}.csv`);
+  // 2. Probe pattern-based fallback: <model>_<condition>.csv per AGENTS.md
+  for (const dir of REAL_DIRS) {
+    for (const mdl of KNOWN_MODELS) {
+      for (const cond of CONDITIONS) {
+        urlSet.add(`${dir}${mdl}_${cond}.csv`);
       }
     }
   }
 
-  // 3. Load all candidates, validate header, skip mismatches
-  const batches = await Promise.all([...allUrls].map(url => tryLoadCSV(url)));
+  // 3. Load all candidates, validate header, skip mismatches silently
+  const batches = await Promise.all([...urlSet].map(url => tryLoadCSV(url)));
   const rows = batches.flat();
 
-  if(!rows.length){
+  if (!rows.length) {
     throw new Error(
       'No matching CSVs found in results/mac1–mac4/. ' +
-      'Expected files named <model>_<condition>.csv with header: ' + REQUIRED_HEADER +
-      '. Switch to "Pilot (sample)" to use sample data.'
+      'Expected files named <model>_<condition>.csv with header:\n' +
+      REQUIRED_HEADER + '\n' +
+      'Switch to "Pilot (sample)" to use sample data.'
     );
   }
   return rows;
 }
 
-// ── FILTERS ───────────────────────────────────────────────────────
-function populateFilters(){
-  const models    = [...new Set(allData.map(r=>r.model))].sort();
-  const variants  = [...new Set(allData.map(r=>r.variant))].sort();
-  const categories= [...new Set(allData.map(r=>r.category))].sort();
+// ═══════════════════════════════════════════════════════════════════
+// STATUS BAR  — last-updated time + per-model row counts
+// ═══════════════════════════════════════════════════════════════════
+function updateStatusBar() {
+  const now = new Date();
+  const timeStr = now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
+
+  // Count rows per model across the full (unfiltered) dataset
+  const counts = {};
+  for (const row of allData) {
+    counts[row.model] = (counts[row.model] || 0) + 1;
+  }
+
+  const models = Object.keys(counts).sort();
+  const pills = models.length
+    ? models.map(m => {
+        const short = m.replace(/^(qwen|llama|gemma|meta-llama\/|google\/|Qwen\/)/i,'');
+        return `<span class="model-pill">${short} <span class="cnt">${counts[m].toLocaleString()}</span></span>`;
+      }).join(' ')
+    : '<em>no data</em>';
+
+  document.getElementById('status-pills').innerHTML =
+    `<strong style="color:var(--text-muted);margin-right:.4rem">Rows:</strong>${pills}`;
+  document.getElementById('status-upd').textContent =
+    `Last updated ${timeStr}`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// FILTERS
+// ═══════════════════════════════════════════════════════════════════
+function populateFilters() {
+  const models     = [...new Set(allData.map(r => r.model))].sort();
+  const variants   = [...new Set(allData.map(r => r.variant))].sort();
+  const categories = [...new Set(allData.map(r => r.category))].sort();
   fillSelect('f-model',    models,     'All models');
   fillSelect('f-variant',  variants,   'All variants');
   fillSelect('f-category', categories, 'All categories');
 }
-function fillSelect(id, vals, allLabel){
+function fillSelect(id, vals, allLabel) {
   const sel = document.getElementById(id);
   const cur = sel.value;
   sel.innerHTML = `<option value="all">${allLabel}</option>`;
-  vals.forEach(v=>{ const o=document.createElement('option'); o.value=o.textContent=v; sel.appendChild(o); });
-  if(vals.includes(cur)) sel.value=cur;
+  vals.forEach(v => {
+    const o = document.createElement('option');
+    o.value = o.textContent = v;
+    sel.appendChild(o);
+  });
+  if (vals.includes(cur)) sel.value = cur;
 }
-function getFilters(){
+function getFilters() {
   return {
     model:    document.getElementById('f-model').value,
     variant:  document.getElementById('f-variant').value,
     category: document.getElementById('f-category').value,
   };
 }
-function applyFilters(data, {model,variant,category}){
-  return data.filter(r=>
-    (model==='all'    || r.model===model) &&
-    (variant==='all'  || r.variant===variant) &&
-    (category==='all' || r.category===category)
+function applyFilters(data, {model, variant, category}) {
+  return data.filter(r =>
+    (model    === 'all' || r.model    === model)    &&
+    (variant  === 'all' || r.variant  === variant)  &&
+    (category === 'all' || r.category === category)
   );
 }
 
-// ── RENDER ────────────────────────────────────────────────────────
-function render(){
+// ═══════════════════════════════════════════════════════════════════
+// RENDER
+// ═══════════════════════════════════════════════════════════════════
+function render() {
   clearLoadingSpinners();
-  const f = getFilters();
+  const f        = getFilters();
   const filtered = applyFilters(allData, f);
   renderGap(filtered);
   renderFix(filtered);
@@ -422,103 +508,123 @@ function render(){
   renderFailsTable(filtered);
 }
 
-// ── VIEW 1: THE GAP ────────────────────────────────────────────────
-function renderGap(data){
-  const models  = [...new Set(data.map(r=>r.model))].sort();
-  const harmful = data.filter(r=>r.split==='harmful' && r.condition==='none');
+// ── VIEW 1: The Gap ───────────────────────────────────────────────
+function renderGap(data) {
+  const models  = [...new Set(data.map(r => r.model))].sort();
+  const harmful = data.filter(r => r.split === 'harmful' && r.condition === 'none');
 
-  // datasets: one per variant
+  if (!harmful.length) {
+    return showChartEmpty('chart-gap', 'No data for condition=none, split=harmful');
+  }
+
   const datasets = VARIANTS.map(v => ({
     label: v,
-    data:  models.map(m=>{
-      const rows = harmful.filter(r=>r.model===m && r.variant===v);
-      return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1) : null;
+    data: models.map(m => {
+      const rows = harmful.filter(r => r.model === m && r.variant === v);
+      return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
     }),
-    backgroundColor: PALETTE[v]+'cc',
+    backgroundColor: PALETTE[v] + 'cc',
     borderColor:     PALETTE[v],
-    borderWidth:1,
-    borderRadius:5,
+    borderWidth: 1, borderRadius: 5,
   }));
 
-  buildChart('chart-gap','bar',
-    { labels: models, datasets },
-    { scales:{
-        y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Refusal rate (harmful)'}},
-        x:{title:{display:true,text:'Model'}}
+  buildChart('chart-gap', 'bar', {labels: models, datasets}, {
+    scales: {
+      y: {min:0, max:100, ticks:{callback:v=>v+'%'}, title:{display:true,text:'Refusal rate (harmful)'}},
+      x: {title:{display:true,text:'Model'}},
+    },
+    plugins: {
+      legend: {position:'top'},
+      tooltip: {callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}},
+    },
+  });
+}
+
+// ── VIEW 2: The Fix ───────────────────────────────────────────────
+function renderFix(data) {
+  const harmful  = data.filter(r => r.split === 'harmful');
+  const harmless = data.filter(r => r.split === 'harmless');
+
+  const harmRef  = CONDITIONS.map(c => {
+    const rows = harmful.filter(r => r.condition === c);
+    return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
+  });
+  const wrongRef = CONDITIONS.map(c => {
+    const rows = harmless.filter(r => r.condition === c);
+    return rows.length ? +(mean(rows.map(r => r.refused)) * 100).toFixed(1) : null;
+  });
+
+  buildChart('chart-fix', 'bar',
+    {
+      labels: CONDITIONS.map(c => COND_LABELS[c]),
+      datasets: [
+        {label:'Harmful refusal ↑',           data:harmRef,  backgroundColor:COND_COLORS.map(c=>c+'bb'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5},
+        {label:'Wrong refusal on harmless ↓',  data:wrongRef, backgroundColor:COND_COLORS.map(c=>c+'33'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5},
+      ],
+    },
+    {
+      scales: {y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Rate (%)'}}},
+      plugins: {
+        legend: {position:'top'},
+        tooltip: {callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}},
       },
-      plugins:{legend:{position:'top'},
-               tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}}
     }
   );
 }
 
-// ── VIEW 2: THE FIX ────────────────────────────────────────────────
-function renderFix(data){
-  const harmful  = data.filter(r=>r.split==='harmful');
-  const harmless = data.filter(r=>r.split==='harmless');
-
-  const harmRef  = CONDITIONS.map(c=>{ const rows=harmful.filter(r=>r.condition===c);  return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1):null; });
-  const wrongRef = CONDITIONS.map(c=>{ const rows=harmless.filter(r=>r.condition===c); return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1):null; });
-
-  const datasets=[
-    { label:'Harmful refusal ↑', data:harmRef,  backgroundColor:COND_COLORS.map(c=>c+'bb'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5 },
-    { label:'Wrong refusal (harmless) ↓', data:wrongRef, backgroundColor:COND_COLORS.map(c=>c+'44'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5, borderDash:[4,3] },
-  ];
-  buildChart('chart-fix','bar',
-    { labels:CONDITIONS.map(c=>COND_LABELS[c]), datasets },
-    { scales:{
-        y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Rate (%)'}},
-      },
-      plugins:{legend:{position:'top'},
-               tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}}
-    }
-  );
-}
-
-// ── VIEW 3: LATENCY ────────────────────────────────────────────────
-function renderLatency(data){
-  const meds = CONDITIONS.map(c=>{
-    const rows = data.filter(r=>r.condition===c).map(r=>r.latency_ms).sort((a,b)=>a-b);
+// ── VIEW 3: Latency ───────────────────────────────────────────────
+function renderLatency(data) {
+  const meds = CONDITIONS.map(c => {
+    const rows = data.filter(r => r.condition === c).map(r => r.latency_ms).sort((a,b) => a - b);
     return rows.length ? Math.round(median(rows)) : null;
   });
-  buildChart('chart-lat','bar',
-    { labels:CONDITIONS.map(c=>COND_LABELS[c]),
-      datasets:[{ label:'Median latency (ms)', data:meds, backgroundColor:COND_COLORS.map(c=>c+'cc'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5 }] },
-    { scales:{
-        y:{min:0,title:{display:true,text:'ms'}},
+
+  buildChart('chart-lat', 'bar',
+    {
+      labels: CONDITIONS.map(c => COND_LABELS[c]),
+      datasets: [{
+        label: 'Median latency (ms)',
+        data: meds,
+        backgroundColor: COND_COLORS.map(c => c + 'cc'),
+        borderColor: COND_COLORS,
+        borderWidth: 1, borderRadius: 5,
+      }],
+    },
+    {
+      scales: {y:{min:0,title:{display:true,text:'ms'}}},
+      plugins: {
+        legend: {display:false},
+        tooltip: {callbacks:{label:c=>` ${c.parsed.y} ms`}},
       },
-      plugins:{legend:{display:false},
-               tooltip:{callbacks:{label:c=>` ${c.parsed.y} ms`}}}
     }
   );
 }
 
-// ── VIEW 4: WHERE IT FAILS ─────────────────────────────────────────
-function renderFailsTable(data){
-  const harmful = data.filter(r=>r.split==='harmful');
-  const cats = [...new Set(harmful.map(r=>r.category))].sort();
-  const vars = VARIANTS.filter(v=>[...new Set(harmful.map(r=>r.variant))].includes(v));
+// ── VIEW 4: Where it fails ────────────────────────────────────────
+function renderFailsTable(data) {
+  const harmful = data.filter(r => r.split === 'harmful');
+  // Categories come from the data — never hard-coded
+  const cats = [...new Set(harmful.map(r => r.category))].sort();
+  const vars = VARIANTS.filter(v => harmful.some(r => r.variant === v));
 
-  // For each (cat,var): find condition with lowest refusal rate; flag if steer_gated
   const failRows = [];
-  for(const cat of cats){
-    for(const v of vars){
+  for (const cat of cats) {
+    for (const v of vars) {
       const rates = {};
-      for(const c of CONDITIONS){
-        const rows = harmful.filter(r=>r.category===cat && r.variant===v && r.condition===c);
-        if(rows.length) rates[c] = mean(rows.map(r=>r.refused));
+      for (const c of CONDITIONS) {
+        const rows = harmful.filter(r => r.category === cat && r.variant === v && r.condition === c);
+        if (rows.length) rates[c] = mean(rows.map(r => r.refused));
       }
-      if(!Object.keys(rates).length) continue;
-      const worst = Object.entries(rates).sort((a,b)=>a[1]-b[1])[0];
-      if(worst[0]==='steer_gated'){
-        failRows.push({ cat, variant:v, worstRate:(worst[1]*100).toFixed(1),
-          ratesByCondition: rates });
+      if (!Object.keys(rates).length) continue;
+      const worst = Object.entries(rates).sort((a,b) => a[1] - b[1])[0];
+      if (worst[0] === 'steer_gated') {
+        failRows.push({cat, variant:v, worstRate:(worst[1]*100).toFixed(1), ratesByCondition:rates});
       }
     }
   }
 
   const el = document.getElementById('tbl-fails');
-  if(!failRows.length){
+  if (!failRows.length) {
     el.innerHTML = `<div class="state" style="min-height:120px">✅ steer_gated is never the worst condition in any cell.</div>`;
     return;
   }
@@ -526,15 +632,16 @@ function renderFailsTable(data){
   let html = `<table><thead><tr>
     <th>Category</th><th>Variant</th>
     ${CONDITIONS.map(c=>`<th>${COND_LABELS[c]}</th>`).join('')}
-    <th>Worst</th></tr></thead><tbody>`;
-  for(const r of failRows){
+    <th>Worst</th>
+  </tr></thead><tbody>`;
+  for (const r of failRows) {
     html += `<tr>
       <td>${r.cat}</td>
       <td>${r.variant}</td>
-      ${CONDITIONS.map(c=>{
-        const v = r.ratesByCondition[c];
-        const pct = v!=null ? (v*100).toFixed(1)+'%' : '—';
-        const cls = v!=null ? (v<.5?'cell-low':v<.75?'cell-mid':'cell-hi') : '';
+      ${CONDITIONS.map(c => {
+        const v   = r.ratesByCondition[c];
+        const pct = v != null ? (v*100).toFixed(1)+'%' : '—';
+        const cls = v != null ? (v < .5 ? 'cell-low' : v < .75 ? 'cell-mid' : 'cell-hi') : '';
         return `<td class="cell-rate ${cls}">${pct}</td>`;
       }).join('')}
       <td class="cell-rate cell-low">${r.worstRate}%</td>
@@ -544,69 +651,83 @@ function renderFailsTable(data){
   el.innerHTML = html;
 }
 
-// ── CHART BUILDER ─────────────────────────────────────────────────
-function buildChart(id, type, data, options){
-  if(charts[id]) charts[id].destroy();
-  const ctx = document.getElementById(id).getContext('2d');
-  charts[id] = new Chart(ctx, {
+// ═══════════════════════════════════════════════════════════════════
+// CHART BUILDER
+// ═══════════════════════════════════════════════════════════════════
+function buildChart(id, type, data, options) {
+  if (charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id);
+  if (!ctx) return;
+  charts[id] = new Chart(ctx.getContext('2d'), {
     type,
     data,
-    options:{
-      responsive:true, maintainAspectRatio:false, animation:{duration:400},
-      plugins:{
-        legend:{labels:{color:'#8898cc',boxWidth:12,padding:14}},
-        tooltip:{backgroundColor:'#0d1540',borderColor:'#1e2f6b',borderWidth:1,
-                 titleColor:'#c8d6ff',bodyColor:'#8898cc',padding:10,cornerRadius:8}
+    options: {
+      responsive:true, maintainAspectRatio:false, animation:{duration:350},
+      plugins: {
+        legend: {labels:{color:'#8898cc',boxWidth:12,padding:14}},
+        tooltip: {
+          backgroundColor:'#0d1540', borderColor:'#1e2f6b', borderWidth:1,
+          titleColor:'#c8d6ff', bodyColor:'#8898cc', padding:10, cornerRadius:8,
+        },
+        ...options.plugins,
       },
       ...options,
-      scales: Object.fromEntries(Object.entries(options.scales||{}).map(([k,v])=>[k,{
-        grid:{color:'#1e2f6b'},
-        ticks:{color:'#8898cc'},
-        ...v
-      }]))
-    }
+      scales: Object.fromEntries(
+        Object.entries(options.scales || {}).map(([k,v]) => [k, {
+          grid:{color:'#1e2f6b'}, ticks:{color:'#8898cc'}, ...v
+        }])
+      ),
+    },
   });
 }
 
-// ── UTILS ─────────────────────────────────────────────────────────
-function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0 }
-function median(sorted){
-  const m=Math.floor(sorted.length/2);
-  return sorted.length%2 ? sorted[m] : (sorted[m-1]+sorted[m])/2;
+function showChartEmpty(id, msg) {
+  const wrap = document.getElementById(id)?.closest('.chart-wrap');
+  if (wrap) wrap.innerHTML = `<div class="state">${msg}</div>`;
 }
 
-// Map wrap→canvasId so we can restore them after wiping innerHTML
-const WRAP_CANVAS_MAP = {
-  'chart-gap':'chart-gap','chart-fix':'chart-fix','chart-lat':'chart-lat'
-};
-function showLoading(){
-  // Destroy charts first (before DOM wipe)
-  Object.keys(charts).forEach(id=>{
-    if(charts[id]){ charts[id].destroy(); delete charts[id]; }
-  });
-  document.querySelectorAll('.chart-wrap').forEach(w=>{
-    const canvas = w.querySelector('canvas');
-    const cid = canvas ? canvas.id : null;
+// ═══════════════════════════════════════════════════════════════════
+// LOADING / ERROR STATES
+// ═══════════════════════════════════════════════════════════════════
+function showLoading() {
+  // Destroy charts before wiping DOM
+  Object.keys(charts).forEach(id => { if(charts[id]){charts[id].destroy();delete charts[id];} });
+  document.querySelectorAll('.chart-wrap').forEach(w => {
+    const cid = w.querySelector('canvas')?.id;
     w.innerHTML = cid
       ? `<div class="state"><div class="spinner"></div><span>Loading…</span></div><canvas id="${cid}" style="display:none"></canvas>`
       : `<div class="state"><div class="spinner"></div><span>Loading…</span></div>`;
   });
-  document.getElementById('tbl-fails').innerHTML='<div class="state"><div class="spinner"></div></div>';
+  document.getElementById('tbl-fails').innerHTML =
+    '<div class="state"><div class="spinner"></div></div>';
+  document.getElementById('status-pills').innerHTML = '<em>loading…</em>';
+  document.getElementById('status-upd').textContent = '';
 }
 
-function clearLoadingSpinners(){
-  document.querySelectorAll('.chart-wrap').forEach(w=>{
-    const spinner = w.querySelector('.state');
-    const canvas  = w.querySelector('canvas');
-    if(spinner) spinner.remove();
-    if(canvas)  canvas.style.display='';
+function clearLoadingSpinners() {
+  document.querySelectorAll('.chart-wrap').forEach(w => {
+    w.querySelector('.state')?.remove();
+    const cv = w.querySelector('canvas');
+    if (cv) cv.style.display = '';
   });
 }
 
-function showError(msg){
-  document.querySelectorAll('.chart-wrap').forEach(w=>{
-    w.innerHTML=`<div class="state" style="color:#ef4444">⚠️ ${msg}</div>`;
+function showError(msg) {
+  document.querySelectorAll('.chart-wrap').forEach(w => {
+    w.innerHTML = `<div class="state" style="color:#ef4444;text-align:center;padding:1rem">⚠️ ${msg}</div>`;
   });
+  document.getElementById('tbl-fails').innerHTML =
+    `<div class="state" style="color:#ef4444">⚠️ ${msg}</div>`;
+  document.getElementById('status-pills').innerHTML = `<span style="color:#ef4444">${msg}</span>`;
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// UTILS
+// ═══════════════════════════════════════════════════════════════════
+function mean(arr)   { return arr.reduce((a,b) => a+b, 0) / arr.length; }
+function median(arr) {
+  const m = Math.floor(arr.length / 2);
+  return arr.length % 2 ? arr[m] : (arr[m-1]+arr[m]) / 2;
 }
 </script>
 </body>
