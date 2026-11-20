@@ -33,6 +33,15 @@ FIELDS = ["prompt_id", "split", "category", "variant", "model", "condition",
           "refused", "judge_score", "latency_ms", "commit"]
 
 
+def resolve(repo: str) -> str:
+    """Local snapshot path if cached (works with HF_HUB_OFFLINE=1), else the repo id."""
+    try:
+        from huggingface_hub import snapshot_download
+        return snapshot_download(repo, local_files_only=True)
+    except Exception:
+        return repo
+
+
 def git_commit() -> str:
     try:
         return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
@@ -76,9 +85,9 @@ class Translator:
         import torch
         from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
         self.torch, self.device = torch, device
-        self.tok = AutoTokenizer.from_pretrained(NLLB)
+        self.tok = AutoTokenizer.from_pretrained(resolve(NLLB))
         self.tok.src_lang = "kan_Knda"
-        self.model = AutoModelForSeq2SeqLM.from_pretrained(NLLB, dtype=torch.float32).to(device).eval()
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(resolve(NLLB), dtype=torch.float32).to(device).eval()
         self.eng = self.tok.convert_tokens_to_ids("eng_Latn")
 
     def __call__(self, text: str) -> str:
@@ -94,8 +103,8 @@ class Guard:
         import torch
         from transformers import AutoModelForCausalLM, AutoTokenizer
         self.torch, self.device = torch, device
-        self.tok = AutoTokenizer.from_pretrained(GUARD)
-        self.model = AutoModelForCausalLM.from_pretrained(GUARD, torch_dtype=torch.bfloat16).to(device).eval()
+        self.tok = AutoTokenizer.from_pretrained(resolve(GUARD))
+        self.model = AutoModelForCausalLM.from_pretrained(resolve(GUARD), torch_dtype=torch.bfloat16).to(device).eval()
         self.safe_id = self.tok.encode("safe", add_special_tokens=False)[0]
         self.unsafe_id = self.tok.encode("unsafe", add_special_tokens=False)[0]
 
