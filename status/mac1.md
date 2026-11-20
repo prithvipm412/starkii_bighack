@@ -31,8 +31,10 @@ Done:
 - Smoke numbers (32 direction prompts, layer 23/36, alpha 34.5, tau 12.4): none = 5/5 English harmful refused, 0/5 harmless refused, 0/3 Kannada variants refused. steer_always = 3/3 Kannada refused, but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada refused, 0/5 harmless refused, English untouched.
 - Projection at layer 23: English harmful ~42, English harmless 3-10, Kannada harmful ~15. Supports the "weak activation" hypothesis; motivated the tau change above.
 - mac1 .venv rebuilt on Python 3.12.16 from requirements.txt; smoke loop re-run on it, same refusals as before, ~85 tok/s.
+- P2: Qwen direction extracted from direction.jsonl (64 harmful + 64 harmless English): layer 23 of 36 (best separation in the middle third 12-23, Cohen's d 7.55), alpha 35.4, tau 15.9. results/mac1/Qwen2.5-3B-Instruct_direction.json. Separation keeps rising after layer 23 (about 10 at 26 and 35), so the layer sweep should include values beyond the middle third.
+- TIP: models already downloaded -> prefix runs with HF_HUB_OFFLINE=1 to skip HF network checks (they timed out here).
 Doing:
-- Waiting for data_tools/output/direction.jsonl + pilot.jsonl (Phase 2).
+- Waiting for data_tools/output/pilot.jsonl, then --conditions none.
 Blocked:
 - mac1 logged in as shared account oberoii284 (read token), but HF still answers 403 'not in the authorized list' for ai4bharat/indictrans2-indic-en-1B AND meta-llama/Llama-Guard-3-1B. That account's access requests must be approved (check huggingface.co/settings/gated-repos). Until then: judge_score blank, no translation; refused (phrase check) still works. Fix later with --rescore.
 - data_tools/output/direction.jsonl + pilot.jsonl not on mac1 yet (AirDrop).
