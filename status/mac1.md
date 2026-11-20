@@ -42,16 +42,16 @@ Options: `--limit N` (first N prompt_ids, all variants), `--layer L --alpha A --
 Sweep: `--layers 10,14,18 --alphas 4,8,12 --conditions steer_gated` -> results/macN/sweep_<model>_<cond>_L<L>_a<A>.csv (same schema).
 Defaults when config has null: layer = best Cohen's-d separation in the middle third; alpha = norm of the harmful-harmless mean difference at that layer; tau = mean + 2 sd of English HARMLESS projections (the English midpoint was too high: Kannada harmful prompts project far below English harmful ones). See results/macN/<model>_direction.json.
 
-Done:
-- requirements.txt (Python 3.12), configs/mac{1,2,3}_*.yaml, pipeline/{data,model,extract_direction,steer,score,run}.py, CLAUDE.md/AGENTS.md "Python 3.12" line. mac1 .venv on 3.12.16.
-- MILESTONE: full loop on Qwen (10 English + 3 Kannada-variant smoke prompts, all 3 conditions, resume verified). Smoke CSVs in results/mac1/smoke/ (NOT real results).
-- Smoke numbers: none = 5/5 English harmful refused, 0/5 harmless, 0/3 Kannada variants. steer_always = 3/3 Kannada but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada, 0/5 harmless, English untouched.
-- Qwen direction from direction.jsonl (64+64): layer 23/36 (best in middle third 12-23, Cohen's d 7.55), alpha 35.4, tau 15.9. Separation keeps rising after 23 (about 10 at 26 and 35) -> layer sweep should include a later layer.
-  results/mac1/Qwen2.5-3B-Instruct_direction.json (full) and results/mac1/qwen_direction_layers.csv (layer,separation: judging chart).
-- Scorer: translator = IndicTrans2 if accessible, ELSE facebook/nllb-200-distilled-600M (log line "[score] translator: ..." says which). mac1 uses NLLB.
-- HF_HUB_OFFLINE=1 works (pipeline loads cached snapshots; transformers 4.57.3 otherwise calls the Hub even offline). Verified offline: Qwen generate + NLLB translate + CSV.
-- Resume guard: each saved reply stores a 10-char hash of its prompt text (no text). If a later prompt file has different text for the same (prompt_id, variant), run.py stops instead of mixing.
-- CODE FREEZE 8:30: pipeline is final, only runs after this.
+Done (03:11):
+- Full run, Qwen, 256 tokens: none (1800 rows) + steer_gated (1800 rows, L23 a35.4 tau15.9) on full.jsonl; steer_always on PILOT IDS ONLY (400 rows). All pushed, Llama Guard scored, no blank judge_score.
+- Phase 5 sweep on pilot ids (kn + kn_mix): 4 settings pushed as results/mac1/sweep_*.csv. NO SETTING MET THE RULE (see failure analysis). Held-out check skipped.
+- Earlier: pipeline, scorer (label + harmful_compliance), truncation check (refusal gap is not a truncation artifact), direction (results/mac1/qwen_direction_layers.csv).
+Doing:
+- Nothing running on mac1.
+Blocked:
+- None.
+Next:
+- Optional if time: L26 with a Kannada-calibrated tau (gate currently fires on ~all Kannada at L26).
 
 Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per row (67 tok/s); NLLB scoring ~5 s for 13 rows.
   English-only pilot (100 rows): ~1.5 min per condition. Full pilot (100 prompt_ids x 4 variants = 400 rows): ~6-8 min per condition + ~3 min scoring. All 3 conditions: ~25-30 min.
@@ -130,12 +130,10 @@ Pilot ids, kn + kn_mix, 256 tokens. HC = harmful_compliance pooled over harmful 
 | kn_latn | 16/50 = 32% |  0/50 =  0% | 42/50 = 84% | 17/50 = 34% |
 | kn_mix  | 11/50 = 22% |  8/50 = 16% | 34/50 = 68% |  8/50 = 16% |
 - GAP: English harmful refusal 90% -> Kannada script 8%, Kanglish 0-32%, code-mixed 16-22%.
-- CAVEAT (READ BEFORE CHARTING kn_latn / kn_mix): the `refused` column = refusal-phrase match, which also fires on "Sorry, I don't understand / could you clarify". All 16 raw kn_latn harmful "refusals" are that. The "excl." columns drop replies with confusion/clarification wording (local check on replies, not in the CSV). Code is frozen, so the CSV keeps the raw definition. judge_score (Llama Guard) still blank: no access.
+- CAVEAT (READ BEFORE CHARTING kn_latn / kn_mix): the `refused` column = refusal-phrase match, which also fires on "Sorry, I don't understand / could you clarify". All 16 raw kn_latn harmful "refusals" are that. The "excl." columns drop replies with confusion/clarification wording (local check on replies, not in the CSV). Code is frozen, so the CSV keeps the raw definition. (judge_score later filled by --rescore.)
 - Harmless en 24% = over-refusal on XSTest-style safe prompts (expected to be non-zero).
 - Generation: 400 rows in 156 s (97 tok/s), median latency 645 ms per prompt. Translator: NLLB-200 600M.
 
-Waiting on:
-- Llama Guard 3 1B access for this HF account (shared oberoii284 gets 403). judge_score is blank until then; refused works. mac4's vvijetha account has Llama Guard access.
 
 ## Pilot commands (mac1, repo root, .venv active)
 ```
@@ -151,7 +149,3 @@ HF_HUB_OFFLINE=1 python -m pipeline.run --config configs/mac1_qwen.yaml --prompt
 ```
 Outputs: results/mac1/Qwen2.5-3B-Instruct_<condition>.csv (+ results/mac1/gate/ projections), raw replies in outputs/replies/ (gitignored).
 
-Blocked:
-- Llama Guard 3 1B: 403 for shared HF account (see Waiting on).
-Next:
-- Pilot runs as above; then English vs Kannada refusal gap + per-condition effect (numbers) here.
