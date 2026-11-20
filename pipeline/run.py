@@ -3,9 +3,10 @@
 python -m pipeline.run --config configs/mac1_qwen.yaml --prompts data_tools/output/pilot.jsonl \
     --conditions none,steer_always,steer_gated [--limit N] [--layer L --alpha A --tau T]
 
-Sweep (one model load, every L x alpha combo -> results/<machine>/sweep_<name>_<cond>_L<L>_a<A>.csv):
+Sweep (one model load, every L x alpha [x tau] combo -> results/<machine>/sweep_<name>_<cond>_L<L>_a<A>.csv;
+with --taus, steer_gated files are sweep_<name>_steer_gated_L<L>_a<A>_t<T>.csv):
 python -m pipeline.run --config ... --prompts ... --conditions steer_gated --limit 150 \
-    --layers 10,14,18 --alphas 4,8,12
+    --layers 10,14,18 --alphas 4,8,12 [--taus 16,20,24]
 
 Generation for all conditions runs first (model in memory, saved after every batch), then the
 model is freed and the scorer models load. Resume key = (prompt_id, variant): rows already in the
@@ -27,7 +28,8 @@ from pipeline.model import free, generate, load_config, load_model
 from pipeline.steer import CONDITIONS, Steerer, load_direction
 
 CSV_FIELDS = ["prompt_id", "split", "category", "variant", "model", "condition",
-              "refused", "judge_score", "latency_ms", "commit"]
+              "refused", "judge_score", "latency_ms", "commit",
+              "label", "harmful_compliance"]  # appended after the CLAUDE.md columns
 GATE_FIELDS = ["prompt_id", "split", "variant", "condition", "layer", "alpha", "tau",
                "projection", "steered", "detected_non_en"]
 
@@ -69,6 +71,15 @@ def read_csv_keys(path):
 
 def append_csv(path, fields, rows):
     new = not os.path.exists(path)
+    if not new:  # older file with a different header: rewrite it with the current header first
+        with open(path, newline="") as f:
+            rd = csv.DictReader(f)
+            old_fields, old_rows = rd.fieldnames, list(rd)
+        if old_fields != fields:
+            with open(path, "w", newline="") as f:
+                w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
+                w.writeheader()
+                w.writerows(old_rows)
     with open(path, "a", newline="") as f:
         w = csv.DictWriter(f, fieldnames=fields, extrasaction="ignore")
         if new:
@@ -92,6 +103,7 @@ def main():
     ap.add_argument("--tau", type=float, default=None)
     ap.add_argument("--layers", default=None, help="sweep: comma list of layers")
     ap.add_argument("--alphas", default=None, help="sweep: comma list of alphas")
+    ap.add_argument("--taus", default=None, help="sweep: comma list of gate thresholds (steer_gated only)")
     ap.add_argument("--rescore", action="store_true", help="no generation; rescore all saved replies, rewrite CSVs")
     args = ap.parse_args()
 
@@ -113,16 +125,21 @@ def main():
     os.makedirs("outputs/replies", exist_ok=True)
 
     # ---- jobs: (condition, layer, alpha, tau, stem)
-    sweep = bool(args.layers or args.alphas)
+    sweep = bool(args.layers or args.alphas or args.taus)
     jobs = []
     for c in conds:
         if sweep and c != "none":
             Ls = [int(x) for x in args.layers.split(",")] if args.layers else [args.layer]
             As = [float(x) for x in args.alphas.split(",")] if args.alphas else [args.alpha]
+            Ts = [float(x) for x in args.taus.split(",")] if (args.taus and c == "steer_gated") else [args.tau]
             for Lx in Ls:
                 for Ax in As:
-                    _, L, a, t = load_direction(cfg, Lx, Ax, args.tau)
-                    jobs.append((c, L, a, t, f"sweep_{cfg['name']}_{c}_L{L}_a{fmt(a)}"))
+                    for Tx in Ts:
+                        _, L, a, t = load_direction(cfg, Lx, Ax, Tx)
+                        stem = f"sweep_{cfg['name']}_{c}_L{L}_a{fmt(a)}"
+                        if args.taus and c == "steer_gated":
+                            stem += f"_t{fmt(t)}"
+                        jobs.append((c, L, a, t, stem))
             continue
         if c == "none":
             try:  # direction only used for a read-only projection log
