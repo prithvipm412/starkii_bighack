@@ -10,24 +10,24 @@ Layers (check() runs them in order and returns the first block):
 Models load lazily, once: NLLB-200-distilled-600M + Llama-Guard-3-1B, on MPS, HF_HUB_OFFLINE=1.
 Verdicts never contain the input or reply text.
 """
+import json
 import os
 import re
 import time
 
-os.environ.setdefault("HF_HUB_OFFLINE", "1")
+os.environ["HF_HUB_OFFLINE"] = "1"
 os.environ.setdefault("TOKENIZERS_PARALLELISM", "false")
 
-from pipeline.data import ITRANS_RE, KN_SUFFIX_RE, is_romanized_indic, script_lang  # noqa: E402  (mac1's detector)
+from pipeline.data import ITRANS_RE, script_lang  # noqa: E402  (mac1's detector)
+
+from guard.romanized import is_kanglish, is_kannada_word, keyword_view, normalized
 
 KANNADA_RE = re.compile(r"[ಀ-೿]")
 LATIN_WORD_RE = re.compile(r"[A-Za-z]+")
-THRESHOLD = 0.5
-PROCESS_THRESHOLD = 0.85
-PROCESS_REQUEST_RE = re.compile(
-    r"(?:how (?:do|can|should) i |please )?(?:kill|stop|terminate) "
-    r"(?:a|an|the|my) (?:python3?|linux|node(?:\.js)?) process[?!.]?",
-    re.IGNORECASE,
-)
+THRESHOLD = 0.86
+OUTPUT_THRESHOLD = 0.5
+GEMMA_ID = "google/gemma-2-2b-it"
+GLOSS_INSTRUCTION = "Translate this Kannada/Kanglish text to plain English. Output only the translation."
 KANNADA_WORDS = {
     "hege": "ಹೇಗೆ", "hegey": "ಹೇಗೆ", "hegide": "ಹೇಗಿದೆ",
     "madu": "ಮಾಡು", "maadu": "ಮಾಡು", "madi": "ಮಾಡಿ", "maadi": "ಮಾಡಿ",
@@ -49,50 +49,51 @@ KANNADA_WORDS = {
     "yaavudu": "ಯಾವುದು", "aadare": "ಆದರೆ", "bari": "ಬರಿ",
     "kole": "ಕೊಲೆ", "visha": "ವಿಷ",
 }
-# The script conversion applies to words with Kannada evidence and preserves embedded English.
-def is_kannada_word(word: str) -> bool:
-    lower = word.lower()
-    return lower in KANNADA_WORDS or bool(KN_SUFFIX_RE.fullmatch(lower) or ITRANS_RE.fullmatch(word))
+# Keep canonical vowels and consonants for common words before falling back to ITRANS.
+SCRIPT_WORDS = {normalized(word): value for word, value in KANNADA_WORDS.items()}
+SCRIPT_WORDS.update({
+    "ivattu": "ಇವತ್ತು", "hegide": "ಹೇಗಿದೆ", "beda": "ಬೇಡ", "gottu": "ಗೊತ್ತು",
+    "nale": "ನಾಳೆ", "ondu": "ಒಂದು", "eradu": "ಎರಡು", "mane": "ಮನೆ",
+    "ota": "ಊಟ", "kadiyodu": "ಕದಿಯೋದು", "tegeyodu": "ತೆಗೆಯೋದು",
+})
+LOOSE_ITRANS = re.compile(r"aa|ee|oo|uu|dh")
+ITRANS_SPELLING = {"aa": "A", "ee": "I", "oo": "U", "uu": "U", "dh": "d"}
 
 
 def to_kannada_script(text: str) -> str:
-    """Normalize common phonetic spellings and convert recognized ITRANS words offline."""
     from indic_transliteration import sanscript
 
     def convert(match):
         word = match.group()
-        if word.lower() in KANNADA_WORDS:
-            return KANNADA_WORDS[word.lower()]
-        if is_kannada_word(word):
+        canonical = SCRIPT_WORDS.get(normalized(word))
+        if canonical is not None:
+            return canonical
+        if ITRANS_RE.fullmatch(word):
             return sanscript.transliterate(word, sanscript.ITRANS, sanscript.KANNADA)
+        if is_kannada_word(word):
+            phonetic = LOOSE_ITRANS.sub(lambda m: ITRANS_SPELLING[m.group()], word.lower())
+            return sanscript.transliterate(phonetic, sanscript.ITRANS, sanscript.KANNADA)
         return word
 
     return LATIN_WORD_RE.sub(convert, text)
 
 
 def detect(text: str) -> str:
-    """en | kn | kn_latn | kn_mix.
-    Kannada script present: kn_mix if Latin words make up >= 15% of the words, else kn.
-    No Indic script: kn_latn if mac1's romanized-Indic heuristic fires (Kanglish word list,
-    Kannada suffixes, ITRANS capitals), else en."""
     text = text or ""
     if KANNADA_RE.search(text):
-        words = text.split()
-        latin = sum(1 for w in words if LATIN_WORD_RE.search(w) and not KANNADA_RE.search(w))
-        return "kn_mix" if words and latin / len(words) >= 0.15 else "kn"
-    words = LATIN_WORD_RE.findall(text)
-    hits = sum(is_kannada_word(word) for word in words)
-    if (hits >= 2 and hits / len(words) >= 0.2) or is_romanized_indic(text):
-        return "kn_latn"
-    return "en"
+        return "kn_mix" if LATIN_WORD_RE.search(text) else "kn"
+    return "kn_latn" if is_kanglish(text) else "en"
 
 
 class LanguageBarrierGuard:
-    def __init__(self, device=None, threshold=THRESHOLD):
+    def __init__(self, device=None, threshold=None):
         self.device = device
-        self.threshold = threshold
+        self.threshold = THRESHOLD if threshold is None else threshold
+        self.output_threshold = OUTPUT_THRESHOLD if threshold is None else threshold
         self._translator = None
         self._guard = None
+        self._gloss_model = None
+        self._gloss_tokenizer = None
 
     # ---- lazy model loading (once) ----
     def _dev(self):
@@ -105,7 +106,10 @@ class LanguageBarrierGuard:
     def translator(self):
         if self._translator is None:
             from baseline.run_baseline import Translator
-            self._translator = Translator(self._dev())
+            translator = Translator(self._dev())
+            if self._dev() == "mps":
+                translator.model.to(dtype=translator.torch.bfloat16)
+            self._translator = translator
         return self._translator
 
     @property
@@ -133,53 +137,98 @@ class LanguageBarrierGuard:
         finally:
             self.translator.tok.src_lang = "kan_Knda"
 
-    def score_input_view(self, text: str) -> float:
-        g = self.guard
-        conv = [{"role": "user", "content": [{"type": "text", "text": text}]}]
-        ids = g.tok.apply_chat_template(conv, return_tensors="pt").to(g.device)
-        return self.score_verdict(ids)
+    def preload(self):
+        from baseline.run_baseline import resolve
+        from transformers import AutoModelForCausalLM, AutoTokenizer
+        import torch
 
-    def score_verdict(self, ids) -> float:
+        _ = self.guard, self.translator
+        if self._gloss_model is None:
+            snapshot = resolve(GEMMA_ID)
+            tokenizer = AutoTokenizer.from_pretrained(snapshot, local_files_only=True)
+            dtype = torch.bfloat16 if self._dev() != "cpu" else torch.float32
+            model = AutoModelForCausalLM.from_pretrained(
+                snapshot, local_files_only=True, dtype=dtype, attn_implementation="eager"
+            ).to(self._dev()).eval()
+            self._gloss_tokenizer, self._gloss_model = tokenizer, model
+
+    def gloss(self, text: str) -> str:
+        import torch
+
+        self.preload()
+        tok = self._gloss_tokenizer
+        message = GLOSS_INSTRUCTION + "\n\nInput: " + json.dumps(text, ensure_ascii=False)
+        inputs = tok.apply_chat_template(
+            [{"role": "user", "content": message}], add_generation_prompt=True,
+            tokenize=True, return_dict=True, return_tensors="pt",
+        ).to(self._dev())
+        with torch.inference_mode():
+            output = self._gloss_model.generate(**inputs, max_new_tokens=64, do_sample=False)
+        return tok.decode(output[0, inputs.input_ids.shape[1]:], skip_special_tokens=True).strip()
+
+    def input_views(self, text: str, detected: str) -> dict:
+        views = {"raw": text}
+        if detected == "en":
+            return views
+        if detected == "kn_latn":
+            views["transliterated"] = to_kannada_script(text)
+        source = views.get("transliterated", text)
+        views["nllb"] = self.to_english(source, "kn")
+        views["llm_gloss"] = self.gloss(text)
+        if detected in ("kn_latn", "kn_mix"):
+            views["keyword_preserving"] = keyword_view(text)
+        return {name: view for name, view in views.items() if view.strip()}
+
+    def score_input_views(self, views: dict) -> dict:
         g = self.guard
+        tok = g.tok
+        tokens = [g.safe_id, g.unsafe_id]
+        if [tok.decode(token) for token in tokens] != ["safe", "unsafe"]:
+            raise RuntimeError("Unexpected Llama Guard verdict tokens")
+        # The official template ends at the assistant header. Its first generated
+        # token is normally two line breaks. Prefill them to score the first verdict position.
+        separator = tok.encode("\n\n", add_special_tokens=False)
+        unique = list(dict.fromkeys(views.values()))
+        sequences = []
+        for view in unique:
+            turn = [{"role": "user", "content": [{"type": "text", "text": view}]}]
+            sequences.append(tok.apply_chat_template(turn) + separator)
+        width = max(map(len, sequences))
+        ids = g.torch.tensor(
+            [[tok.eos_token_id] * (width - len(seq)) + seq for seq in sequences], device=g.device
+        )
+        mask = g.torch.tensor(
+            [[0] * (width - len(seq)) + [1] * len(seq) for seq in sequences], device=g.device
+        )
+        positions = (mask.cumsum(dim=1) - 1).clamp_min(0)
         with g.torch.inference_mode():
-            out = g.model.generate(ids, max_new_tokens=6, do_sample=False, pad_token_id=0,
-                                   output_scores=True, return_dict_in_generate=True)
-        tokens = out.sequences[0, ids.shape[1]:].tolist()
-        for step, tid in enumerate(tokens):
-            if tid in (g.safe_id, g.unsafe_id):
-                pair = out.scores[step][0, [g.safe_id, g.unsafe_id]].float()
-                return float(g.torch.softmax(pair, dim=0)[1])
-        verdict = g.tok.decode(tokens, skip_special_tokens=True).strip().lower()
-        if verdict.startswith(("safe", "unsafe")):
-            return float(verdict.startswith("unsafe"))
-        raise RuntimeError("Llama Guard did not emit a valid verdict")
+            logits = g.model(
+                input_ids=ids, attention_mask=mask, position_ids=positions, use_cache=False,
+                logits_to_keep=1,
+            ).logits[:, -1, tokens].float()
+            probabilities = g.torch.softmax(logits, dim=-1)[:, 1].tolist()
+        if not all(0 <= probability <= 1 for probability in probabilities):
+            raise RuntimeError("Llama Guard returned an invalid probability")
+        scores = dict(zip(unique, probabilities))
+        return {name: scores[view] for name, view in views.items()}
 
     def input_check(self, text: str) -> dict:
         t0 = time.perf_counter()
         text = (text or "").strip()
-        if not text:
-            return {"blocked": False, "layer": "input", "p_unsafe": 0.0, "detected": "en",
-                    "scores": {"raw": 0.0, "transliterated": None, "english": None},
-                    "latency_ms": 0, "note": "empty input"}
         detected = detect(text)
-        transliterated = to_kannada_script(text) if detected == "kn_latn" else None
-        if transliterated is not None:
-            english = self.to_english(transliterated, "kn")
-        else:
-            english = self.to_english(text, detected)
-        views = {"raw": text, "transliterated": transliterated, "english": english}
-        if not english.strip():
-            raise RuntimeError("NLLB returned an empty translation")
-        scored = {view: self.score_input_view(view) for view in dict.fromkeys(views.values()) if view is not None}
-        scores = {name: round(scored[view], 4) if view is not None else None for name, view in views.items()}
-        p = max(scored.values())
+        scores = self.score_input_views(self.input_views(text, detected)) if text else {}
+        p = max(scores.values(), default=0.0)
         threshold = self.threshold
-        # Full-match only: additional instructions always use the normal safety threshold.
-        if detected == "en" and threshold == THRESHOLD and PROCESS_REQUEST_RE.fullmatch(text):
-            threshold = PROCESS_THRESHOLD
-        return {"blocked": p > threshold, "layer": "input", "p_unsafe": round(p, 4),
-                "scores": scores, "threshold": threshold, "detected": detected,
-                "latency_ms": round((time.perf_counter() - t0) * 1000)}
+        return {
+            "blocked": p > threshold, "layer": "input", "p_unsafe": round(p, 4),
+            "detected": detected, "threshold": threshold,
+            "views": [{"view": name, "p_unsafe": round(score, 4)} for name, score in scores.items()],
+            "scores": {"raw": round(scores.get("raw", 0.0), 4),
+                       "transliterated": round(scores["transliterated"], 4) if "transliterated" in scores else None,
+                       "english": round(scores["nllb"], 4) if "nllb" in scores else
+                                  round(scores.get("raw", 0.0), 4) if detected == "en" else None},
+            "latency_ms": round((time.perf_counter() - t0) * 1000),
+        }
 
     def output_check(self, reply: str, prompt: str = "") -> dict:
         """Llama Guard on (prompt, reply) after translating non-English text, as in pipeline/score.py."""
@@ -203,7 +252,7 @@ class LanguageBarrierGuard:
                 break
         if p != p:  # no verdict token: fall back to the decoded verdict
             p = 1.0 if g.tok.decode(new, skip_special_tokens=True).strip().lower().startswith("unsafe") else 0.0
-        return {"blocked": p > self.threshold, "layer": "output", "p_unsafe": round(p, 4),
+        return {"blocked": p > self.output_threshold, "layer": "output", "p_unsafe": round(p, 4),
                 "detected": r_det, "latency_ms": round((time.perf_counter() - t0) * 1000)}
 
     def check(self, text: str, reply: str = None) -> dict:
@@ -219,8 +268,8 @@ class LanguageBarrierGuard:
             o = self.output_check(reply, prompt=text)
             layers.append(o)
             if o["blocked"]:
-                return {"verdict": "block", **o, "scores": v["scores"], "layers": layers}
+                return {"verdict": "block", **o, "scores": v["scores"], "views": v["views"], "layers": layers}
         return {"verdict": "allow", "blocked": False, "layer": None, "detected": v["detected"],
-                "p_unsafe": v["p_unsafe"], "scores": v["scores"], "threshold": v.get("threshold", self.threshold),
+                "p_unsafe": v["p_unsafe"], "scores": v["scores"], "views": v["views"], "threshold": v.get("threshold", self.threshold),
                 "latency_ms": sum(l.get("latency_ms", 0) for l in layers),
                 "layers": layers}
