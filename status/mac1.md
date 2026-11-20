@@ -34,6 +34,7 @@ Done:
 Doing:
 - Waiting for data_tools/output/direction.jsonl + pilot.jsonl (Phase 2).
 Blocked:
-- No HF login on mac1: Llama Guard 3 1B and IndicTrans2 are gated, so judge_score is blank until `hf auth login`.
+- mac1 logged in as shared account oberoii284 (read token), but HF still answers 403 'not in the authorized list' for ai4bharat/indictrans2-indic-en-1B AND meta-llama/Llama-Guard-3-1B. That account's access requests must be approved (check huggingface.co/settings/gated-repos). Until then: judge_score blank, no translation; refused (phrase check) still works. Fix later with --rescore.
+- data_tools/output/direction.jsonl + pilot.jsonl not on mac1 yet (AirDrop).
 Next:
 - Pilot: extract_direction on direction.jsonl, then --conditions none on pilot.jsonl.
