@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- FINDINGS.md updated with rescored Qwen (pilot64) and Gemma (mac3 rescore 3170860). The gap holds on harmful_compliance: Qwen en 2% -> kn 76%, kn_mix 52%; Gemma 0 -> 44 / 16. kn_latn is mostly not_understood (Qwen 72%, Gemma 64%). steer_gated over-refusal on harmless is REAL refusal (label refused +20..+80 pts), not not_understood. Llama-3.2 PENDING.
 - Baseline translator = NLLB-200-distilled-600M kn->en (local, offline; same settings as pipeline/score.py). Pilot baseline complete (400 rows): harmful flagged en 49/50, kn 45/50, kn_mix 46/50, kn_latn (untranslated) 21/50; harmless flagged en 6, kn 4, kn_mix 3, kn_latn 1 /50. Median latency: en 177 ms, kn 424, kn_mix 404, kn_latn 113.
 - summarize.py v2: adds run (main | pilot64 ...), scope (all | pilot ids only), harmful_compliance %, and label breakdown (refused / not_understood / complied %) per split.
 - analysis/FINDINGS.md draft (numbers only, pilot): gap per model (Qwen, Gemma), Llama Guard en/kn_latn, projections, gated vs always, failure analysis. PENDING: Llama-3.2, Guard kn/kn_mix, full set, handlabels, translation check.
@@ -25,8 +26,10 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: full baseline (1800 rows) in the background, resumable, pushed every 30 min. FINDINGS update with rescored Qwen.
+Doing: full Llama Guard baseline in the background (633/1800 rows at last push), resumable, auto-push every 30 min.
 
-Blocked: scorer_check waits on handlabels.
+Blocked:
+- scorer_check waits on results/mac*/handlabels.csv (format above).
+- 20-prompt translation check not done yet (needs a human).
 
-Next: build pilot.jsonl/full.jsonl -> check 20 translations -> prompts.zip + shasum -> pilot baseline.
+Next: full baseline done -> summarize -> per-category failure analysis (analysis/failure.py) -> FINDINGS full-set numbers; scorer_check once handlabels land; Llama-3.2 numbers when mac2 pushes.
