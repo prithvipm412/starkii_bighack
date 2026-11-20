@@ -1,5 +1,10 @@
-"""Kannada evidence and lightweight normalization for Latin-script text."""
+"""Kannada evidence and lightweight normalization for Latin-script text (mac3, a0106f0 / 064a249).
+
+Used only by LanguageBarrierGuard(kanglish="romanized"), which is OFF by default.
+"""
 import re
+
+from pipeline.data import ITRANS_RE
 
 # Common conversational forms, including regional and informal spellings.
 WORDS = frozenset("""
@@ -102,3 +107,56 @@ KEYWORDS = {normalized(word): meaning for word, meaning in KEYWORDS.items()}
 
 def keyword_view(text):
     return WORD_RE.sub(lambda m: KEYWORDS.get(normalized(m.group()), m.group()), text)
+
+
+# ---- word-level transliteration (moved from mac3's guard.py, 064a249) ----
+LATIN_WORD_RE = re.compile(r"[A-Za-z]+")
+KANNADA_WORDS = {
+    "hege": "ಹೇಗೆ", "hegey": "ಹೇಗೆ", "hegide": "ಹೇಗಿದೆ",
+    "madu": "ಮಾಡು", "maadu": "ಮಾಡು", "madi": "ಮಾಡಿ", "maadi": "ಮಾಡಿ",
+    "madodu": "ಮಾಡೋದು", "maadodu": "ಮಾಡೋದು",
+    "maduvudu": "ಮಾಡುವುದು", "maaduvudu": "ಮಾಡುವುದು",
+    "maduvudhu": "ಮಾಡುವುದು", "maaduvudhu": "ಮಾಡುವುದು",
+    "beku": "ಬೇಕು", "beka": "ಬೇಕಾ", "enu": "ಏನು", "yenu": "ಏನು",
+    "elli": "ಎಲ್ಲಿ", "yaake": "ಯಾಕೆ", "yake": "ಯಾಕೆ", "yaaru": "ಯಾರು",
+    "yarannadaru": "ಯಾರನ್ನಾದರೂ", "obbarige": "ಒಬ್ಬರಿಗೆ",
+    "koduvudu": "ಕೊಡುವುದು", "kodu": "ಕೊಡು", "kodi": "ಕೊಡಿ",
+    "nanna": "ನನ್ನ", "nanage": "ನನಗೆ", "nange": "ನನಗೆ",
+    "ninna": "ನಿನ್ನ", "nimma": "ನಿಮ್ಮ", "namma": "ನಮ್ಮ",
+    "illa": "ಇಲ್ಲ", "ide": "ಇದೆ", "idu": "ಇದು", "adu": "ಅದು",
+    "mattu": "ಮತ್ತು", "haagu": "ಹಾಗೂ", "swalpa": "ಸ್ವಲ್ಪ",
+    "heli": "ಹೇಳಿ", "dayavittu": "ದಯವಿಟ್ಟು", "banni": "ಬನ್ನಿ",
+    "anna": "ಅಣ್ಣ", "akka": "ಅಕ್ಕ", "hogu": "ಹೋಗು",
+    "havaamaana": "ಹವಾಮಾನ", "chaha": "ಚಹಾ", "bengaluru": "ಬೆಂಗಳೂರು",
+    "tumba": "ತುಂಬಾ", "alli": "ಅಲ್ಲಿ", "inda": "ಇಂದ", "yavudu": "ಯಾವುದು",
+    "yaavudu": "ಯಾವುದು", "aadare": "ಆದರೆ", "bari": "ಬರಿ",
+    "kole": "ಕೊಲೆ", "visha": "ವಿಷ",
+}
+# Keep canonical vowels and consonants for common words before falling back to ITRANS.
+SCRIPT_WORDS = {normalized(word): value for word, value in KANNADA_WORDS.items()}
+SCRIPT_WORDS.update({
+    "ivattu": "ಇವತ್ತು", "hegide": "ಹೇಗಿದೆ", "beda": "ಬೇಡ", "gottu": "ಗೊತ್ತು",
+    "nale": "ನಾಳೆ", "ondu": "ಒಂದು", "eradu": "ಎರಡು", "mane": "ಮನೆ",
+    "ota": "ಊಟ", "kadiyodu": "ಕದಿಯೋದು", "tegeyodu": "ತೆಗೆಯೋದು",
+})
+LOOSE_ITRANS = re.compile(r"aa|ee|oo|uu|dh")
+ITRANS_SPELLING = {"aa": "A", "ee": "I", "oo": "U", "uu": "U", "dh": "d"}
+
+
+def to_kannada_script(text: str) -> str:
+    """Word-level Kanglish -> Kannada script: common phonetic spellings first, then ITRANS fallback."""
+    from indic_transliteration import sanscript
+
+    def convert(match):
+        word = match.group()
+        canonical = SCRIPT_WORDS.get(normalized(word))
+        if canonical is not None:
+            return canonical
+        if ITRANS_RE.fullmatch(word):
+            return sanscript.transliterate(word, sanscript.ITRANS, sanscript.KANNADA)
+        if is_kannada_word(word):
+            phonetic = LOOSE_ITRANS.sub(lambda m: ITRANS_SPELLING[m.group()], word.lower())
+            return sanscript.transliterate(phonetic, sanscript.ITRANS, sanscript.KANNADA)
+        return word
+
+    return LATIN_WORD_RE.sub(convert, text)

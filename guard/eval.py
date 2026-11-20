@@ -1,4 +1,8 @@
-"""Run python -m guard.eval [--testset PATH] with the cached models and local Git history.
+"""python -m guard.eval [--testset PATH] [--threshold 0.5]: default vs optional Kanglish mode on a test set.
+
+Compares LanguageBarrierGuard(kanglish="itrans") (default, = study baseline) with kanglish="romanized"
+(mac3's guard/romanized.py, off by default) on the input layer, per variant: accuracy, harmful recall,
+harmless false-block rate. Prints numbers only.
 
 The test set holds prompt text, so it is kept OUTSIDE the repo. Path: --testset, else the
 GUARD_TESTSET env var, else ~/Desktop/guard_testset.jsonl. JSONL rows: {"id", "variant", "harmful", "text"}.
@@ -9,97 +13,55 @@ import os
 import sys
 from pathlib import Path
 from statistics import median
-import subprocess
-from types import ModuleType
 
-from guard.guard import LanguageBarrierGuard
+from guard.guard import THRESHOLD, LanguageBarrierGuard
 
-ROOT = Path(__file__).resolve().parents[1]
-OLD_COMMIT = "a0106f0"
 VARIANTS = ("en", "kn", "kn_latn", "kn_mix")
-
-
-def old_guard():
-    source = subprocess.check_output(
-        ["git", "show", f"{OLD_COMMIT}:guard/guard.py"], cwd=ROOT, timeout=10
-    )
-    module = ModuleType("guard_reference")
-    exec(compile(source, f"{OLD_COMMIT}:guard/guard.py", "exec"), module.__dict__)
-    return module.LanguageBarrierGuard(), module
-
-
-def metrics(labels, blocks):
-    positives = sum(labels)
-    negatives = len(labels) - positives
-    return (
-        100 * sum(label == block for label, block in zip(labels, blocks)) / len(labels),
-        100 * sum(label and block for label, block in zip(labels, blocks)) / positives,
-        100 * sum(not label and block for label, block in zip(labels, blocks)) / negatives,
-    )
-
-
-def calibrate(rows, scores):
-    labels = [row["harmful"] for row in rows]
-    candidates = []
-    for percent in range(1, 100):
-        threshold = percent / 100
-        blocks = [score > threshold for score in scores]
-        accuracy, recall, false_blocks = metrics(labels, blocks)
-        if false_blocks <= 10:
-            candidates.append((threshold, recall, false_blocks, accuracy))
-    return max(candidates, key=lambda c: (c[1], -c[2], -abs(c[0] - 0.5)))
 
 
 def testset_path(arg=None):
     return Path(arg or os.environ.get("GUARD_TESTSET") or Path.home() / "Desktop" / "guard_testset.jsonl")
 
 
+def metrics(labels, blocks):
+    pos = sum(labels)
+    neg = len(labels) - pos
+    acc = 100 * sum(l == b for l, b in zip(labels, blocks)) / len(labels)
+    rec = 100 * sum(l and b for l, b in zip(labels, blocks)) / pos if pos else float("nan")
+    fb = 100 * sum((not l) and b for l, b in zip(labels, blocks)) / neg if neg else float("nan")
+    return acc, rec, fb
+
+
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--testset", help="JSONL test set (outside the repo); default $GUARD_TESTSET")
+    ap.add_argument("--threshold", type=float, default=THRESHOLD)
     args = ap.parse_args()
     path = testset_path(args.testset)
     try:
         rows = [json.loads(line) for line in path.read_text(encoding="utf-8").splitlines() if line.strip()]
     except (OSError, ValueError) as e:
         sys.exit(f"ERROR: cannot read test set {path}: {e} (set --testset or GUARD_TESTSET)")
-    guard = LanguageBarrierGuard()
-    old, old_module = old_guard()
-    old._guard = guard.guard
-    old_blocks, new_blocks, new_result = [], [], []
-    for row in rows:
-        text = row["text"]
-        detected = old.detect(text)
-        _, raw = old.guard(text)
-        english = old.to_english(text, detected)
-        score = max(raw, old.guard(english)[1]) if english != text else raw
-        threshold = old_module.THRESHOLD
-        if detected == "en" and old_module.PROCESS_REQUEST_RE.fullmatch(text):
-            threshold = old_module.PROCESS_THRESHOLD
-        old_blocks.append(score > threshold)
-    del old
-    if guard._dev() == "mps":
-        guard.guard.torch.mps.empty_cache()
-    guard.preload()
-    guard.check("ivattu weather hegidhe?")
-    for row in rows:
-        result = guard.check(row["text"])
-        new_blocks.append(result["blocked"])
-        new_result.append(result)
 
-    print("| Variant | N | OLD accuracy | OLD harmful recall | OLD harmless false-blocks | NEW accuracy | NEW harmful recall | NEW harmless false-blocks |")
+    default = LanguageBarrierGuard(threshold=args.threshold)
+    optional = LanguageBarrierGuard(threshold=args.threshold, kanglish="romanized")
+    optional._guard, optional._translator = default.guard, default.translator  # share the two models
+    res = {}
+    for name, g in (("default", default), ("romanized", optional)):
+        res[name] = [g.input_check(r["text"]) for r in rows]
+
+    print(f"threshold {args.threshold}; n = {len(rows)}")
+    print("| Variant | N | default acc | default recall | default false-blocks | romanized acc | romanized recall | romanized false-blocks |")
     print("| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |")
-    for variant in (*VARIANTS, "ALL"):
-        indices = [i for i, row in enumerate(rows) if variant == "ALL" or row["variant"] == variant]
-        labels = [rows[i]["harmful"] for i in indices]
-        rates = metrics(labels, [old_blocks[i] for i in indices]) + metrics(labels, [new_blocks[i] for i in indices])
-        print(f"| {variant} | {len(indices)} | " + " | ".join(f"{rate:.1f}%" for rate in rates) + " |")
-
-    scores = [result["p_unsafe"] for result in new_result]
-    threshold, recall, false_blocks, _ = calibrate(rows, scores)
-    times = [result["latency_ms"] for result in new_result]
-    print(f"Threshold (global calibration): {threshold:.2f}; recall: {recall:.1f}%; false-blocks: {false_blocks:.1f}%")
-    print(f"Warm latency (ms), median / max: {median(times):.0f} / {max(times)}")
+    for v in (*VARIANTS, "ALL"):
+        idx = [i for i, r in enumerate(rows) if v == "ALL" or r["variant"] == v]
+        labels = [bool(rows[i]["harmful"]) for i in idx]
+        rates = metrics(labels, [res["default"][i]["blocked"] for i in idx]) + \
+            metrics(labels, [res["romanized"][i]["blocked"] for i in idx])
+        print(f"| {v} | {len(idx)} | " + " | ".join(f"{x:.1f}%" for x in rates) + " |")
+    for name in res:
+        t = [x["latency_ms"] for x in res[name]]
+        print(f"{name}: warm latency median {median(t):.0f} ms, max {max(t)} ms")
 
 
 if __name__ == "__main__":

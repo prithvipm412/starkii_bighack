@@ -78,9 +78,8 @@ def main():
     args = ap.parse_args()
     if args.preload:
         with LOCK:
-            GUARD.preload()
             GUARD.check("hello")
-            GUARD.check("\u0ca8\u0cae\u0cb8\u0ccd\u0c95\u0cbe\u0cb0")  # warm up the multilingual path
+            GUARD.check("\u0ca8\u0cae\u0cb8\u0ccd\u0c95\u0cbe\u0cb0")  # Kannada: loads NLLB too
     srv = ThreadingHTTPServer((args.host, args.port), Handler)
     print(f"LanguageBarrierGuard on http://{args.host}:{args.port}  (POST /check, GET /health)", flush=True)
     try:
