@@ -2,6 +2,7 @@
 
 Done:
 - TRANSLATION = GOOGLE TRANSLATE for the whole study (IndicTrans2 download ~118 KB/s, not viable). analysis/build_google.py: kn = Google en->kn; kn_latn = mac2 transliterate (ITRANS); kn_mix = mac2 TERM_PATTERN masked + Google + restored. Same schema/4 variants as data_tools.build.
+- prompts_pilot_v2.zip (FULL pilot, data_tools/output/pilot.jsonl): 400 rows = 100 prompts (50 harmful + 50 harmless) x 4 variants, 0 failed. shasum f7be0bf20c32cbe5bc25d8af4d859e4af346c459 (supersedes the mini pilot)
 - prompts_pilot.zip (MINI pilot, data_tools/output/pilot.jsonl): 160 rows = 40 prompts (20 harmful + 20 harmless, 18 categories) x 4 variants. shasum d143f595aa4d97a73550e3b82dbcf88447f2f678
 - prompts_direction.zip (data_tools/output/direction.jsonl, 128 English rows d0001-d0128): shasum 644d06b86e70c12e6ebf79182a3be076a09fef82
 - Env: .venv rebuilt with Python 3.12.16 (/opt/homebrew/bin/python3.12); torch 2.15.0, transformers 4.57.3, MPS ok; huggingface_hub 0.36.2.
@@ -16,7 +17,7 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: building the rest of the pilot (100 prompts -> prompts_pilot_v2.zip), then full.jsonl, with Google Translate in the background.
+Doing: building full.jsonl (450 prompts) with Google Translate in the background.
 
 Blocked:
 - Baseline: Llama-Guard-3-1B is not downloaded yet (3 GB at ~118 KB/s).
