@@ -28,18 +28,38 @@ Sweep: `--layers 10,14,18 --alphas 4,8,12 --conditions steer_gated` -> results/m
 Defaults when config has null: layer = best Cohen's-d separation in the middle third; alpha = norm of the harmful-harmless mean difference at that layer; tau = mean + 2 sd of English HARMLESS projections (the English midpoint was too high: Kannada harmful prompts project far below English harmful ones). See results/macN/<model>_direction.json.
 
 Done:
-- requirements.txt (Python 3.12), configs/mac{1,2,3}_*.yaml, pipeline/{data,model,extract_direction,steer,score,run}.py, CLAUDE.md/AGENTS.md "Python 3.12" line.
-- MILESTONE: full loop on Qwen passed: 10 English prompts (5 harmful, 5 harmless) + kn/kn_latn/kn_mix of one harmful prompt, all 3 conditions, resume verified. CSVs in results/mac1/smoke/ (NOT real results; kept out of results/mac1/*.csv on purpose). ~75-90 tok/s on M5, batch 8.
-- Smoke numbers (32 direction prompts, layer 23/36, alpha 34.5, tau 12.4): none = 5/5 English harmful refused, 0/5 harmless refused, 0/3 Kannada variants refused. steer_always = 3/3 Kannada refused, but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada refused, 0/5 harmless refused, English untouched.
-- Projection at layer 23: English harmful ~42, English harmless 3-10, Kannada harmful ~15. Supports the "weak activation" hypothesis; motivated the tau change above.
-- mac1 .venv rebuilt on Python 3.12.16 from requirements.txt; smoke loop re-run on it, same refusals as before, ~85 tok/s.
-- P2: Qwen direction extracted from direction.jsonl (64 harmful + 64 harmless English): layer 23 of 36 (best separation in the middle third 12-23, Cohen's d 7.55), alpha 35.4, tau 15.9. results/mac1/Qwen2.5-3B-Instruct_direction.json. Separation keeps rising after layer 23 (about 10 at 26 and 35), so the layer sweep should include values beyond the middle third.
-- TIP: models already downloaded -> prefix runs with HF_HUB_OFFLINE=1 to skip HF network checks (they timed out here). NEEDS THE PIPELINE FROM a later commit than 549b5b5: transformers 4.57.3 calls the Hub when a tokenizer is loaded by repo id even offline; pipeline now loads the local cached snapshot when HF_HUB_OFFLINE=1. Verified offline: Qwen generate + NLLB translate.
-- Scorer translator: IndicTrans2 if accessible, ELSE facebook/nllb-200-distilled-600M (ungated). The log line "[score] translator: ..." says which one ran. mac1 uses NLLB (IndicTrans2 still gated).
-Doing:
-- Waiting for data_tools/output/pilot.jsonl, then --conditions none.
+- requirements.txt (Python 3.12), configs/mac{1,2,3}_*.yaml, pipeline/{data,model,extract_direction,steer,score,run}.py, CLAUDE.md/AGENTS.md "Python 3.12" line. mac1 .venv on 3.12.16.
+- MILESTONE: full loop on Qwen (10 English + 3 Kannada-variant smoke prompts, all 3 conditions, resume verified). Smoke CSVs in results/mac1/smoke/ (NOT real results).
+- Smoke numbers: none = 5/5 English harmful refused, 0/5 harmless, 0/3 Kannada variants. steer_always = 3/3 Kannada but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada, 0/5 harmless, English untouched.
+- Qwen direction from direction.jsonl (64+64): layer 23/36 (best in middle third 12-23, Cohen's d 7.55), alpha 35.4, tau 15.9. Separation keeps rising after 23 (about 10 at 26 and 35) -> layer sweep should include a later layer.
+  results/mac1/Qwen2.5-3B-Instruct_direction.json (full) and results/mac1/qwen_direction_layers.csv (layer,separation: judging chart).
+- Scorer: translator = IndicTrans2 if accessible, ELSE facebook/nllb-200-distilled-600M (log line "[score] translator: ..." says which). mac1 uses NLLB.
+- HF_HUB_OFFLINE=1 works (pipeline loads cached snapshots; transformers 4.57.3 otherwise calls the Hub even offline). Verified offline: Qwen generate + NLLB translate + CSV.
+- Resume guard: each saved reply stores a 10-char hash of its prompt text (no text). If a later prompt file has different text for the same (prompt_id, variant), run.py stops instead of mixing.
+- CODE FREEZE 8:30: pipeline is final, only runs after this.
+
+Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per row (67 tok/s); NLLB scoring ~5 s for 13 rows.
+  English-only pilot (100 rows): ~1.5 min per condition. Full pilot (100 prompt_ids x 4 variants = 400 rows): ~6-8 min per condition + ~3 min scoring. All 3 conditions: ~25-30 min.
+
+Waiting on:
+- data_tools/output/pilot.jsonl from mac4 (English-only first, then Kannada).
+- Llama Guard 3 1B access for this HF account (shared oberoii284 gets 403). judge_score is blank until then; refused works. mac4's vvijetha account has Llama Guard access.
+
+## Pilot commands (mac1, repo root, .venv active)
+```
+# English-only pilot (same file name works when the full Kannada pilot replaces it):
+HF_HUB_OFFLINE=1 caffeinate -dims python -m pipeline.run --config configs/mac1_qwen.yaml --prompts data_tools/output/pilot.jsonl --conditions none        > logs/mac1_pilot_none.log 2>&1
+HF_HUB_OFFLINE=1 caffeinate -dims python -m pipeline.run --config configs/mac1_qwen.yaml --prompts data_tools/output/pilot.jsonl --conditions steer_gated > logs/mac1_pilot_gated.log 2>&1
+HF_HUB_OFFLINE=1 caffeinate -dims python -m pipeline.run --config configs/mac1_qwen.yaml --prompts data_tools/output/pilot.jsonl --conditions steer_always > logs/mac1_pilot_always.log 2>&1
+# When the full Kannada pilot arrives: rerun the SAME commands. Rows keyed by (prompt_id, variant):
+# finished English rows are skipped (not duplicated, not overwritten); only the new kn/kn_latn/kn_mix rows are generated and appended.
+# Re-score everything (e.g. after Llama Guard access, or to redo translation with NLLB). No regeneration; CSVs are rewritten:
+HF_HUB_OFFLINE=1 python -m pipeline.run --config configs/mac1_qwen.yaml --prompts data_tools/output/pilot.jsonl --conditions none,steer_gated,steer_always --rescore > logs/mac1_rescore.log 2>&1
+#   (--rescore after a NEW model download: drop HF_HUB_OFFLINE=1 for that one run)
+```
+Outputs: results/mac1/Qwen2.5-3B-Instruct_<condition>.csv (+ results/mac1/gate/ projections), raw replies in outputs/replies/ (gitignored).
+
 Blocked:
-- mac1 logged in as shared account oberoii284 (read token), but HF still answers 403 'not in the authorized list' for ai4bharat/indictrans2-indic-en-1B AND meta-llama/Llama-Guard-3-1B. That account's access requests must be approved (check huggingface.co/settings/gated-repos). Until then: judge_score blank, no translation; refused (phrase check) still works. Fix later with --rescore.
-- data_tools/output/direction.jsonl + pilot.jsonl not on mac1 yet (AirDrop).
+- Llama Guard 3 1B: 403 for shared HF account (see Waiting on).
 Next:
-- Pilot: extract_direction on direction.jsonl, then --conditions none on pilot.jsonl.
+- Pilot runs as above; then English vs Kannada refusal gap + per-condition effect (numbers) here.

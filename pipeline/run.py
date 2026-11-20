@@ -16,6 +16,7 @@ latency_ms = generation wall time of the batch / batch size (scoring not include
 """
 import argparse
 import csv
+import hashlib
 import json
 import os
 import subprocess
@@ -37,6 +38,10 @@ def git_commit():
                               text=True, timeout=10).stdout.strip() or "unknown"
     except Exception:
         return "unknown"
+
+
+def text_hash(t):
+    return hashlib.sha1(t.encode("utf-8")).hexdigest()[:10]
 
 
 def key(r):
@@ -133,7 +138,14 @@ def main():
     if not args.rescore:
         for c, L, a, t, stem in jobs:
             rep_path = f"outputs/replies/{stem}.jsonl"
-            done = {key(r) for r in read_jsonl(rep_path)}
+            saved = read_jsonl(rep_path)
+            done = {key(r) for r in saved}
+            want = {key(r): text_hash(r["text"]) for r in rows}
+            clash = [key(r) for r in saved if r.get("text_sha1") and key(r) in want and r["text_sha1"] != want[key(r)]]
+            if clash:
+                raise SystemExit(f"[gen] {stem}: {len(clash)} saved replies were made from DIFFERENT prompt text "
+                                 f"for the same (prompt_id, variant), e.g. {clash[:3]}. Not mixing them. Move "
+                                 f"{rep_path} and results/{cfg['machine']}/{stem}.csv aside, then rerun.")
             todo = [r for r in rows if key(r) not in done]
             print(f"[gen] {stem}: {len(done)} done, {len(todo)} to do (L={L} alpha={a} tau={t})")
             if not todo:
@@ -160,7 +172,7 @@ def main():
                     for r, rep, n, p, s, ne in zip(batch, replies, ntok, proj, steered, non_en):
                         f.write(json.dumps({
                             "prompt_id": r["prompt_id"], "variant": r["variant"], "split": r["split"],
-                            "category": r["category"], "condition": c, "layer": L, "alpha": a, "tau": t,
+                            "category": r["category"], "text_sha1": text_hash(r["text"]), "condition": c, "layer": L, "alpha": a, "tau": t,
                             "projection": None if p is None else round(p, 4), "steered": s,
                             "detected_non_en": ne, "reply": rep, "reply_tokens": n,
                             "latency_ms": round(dt * 1000 / len(batch))}, ensure_ascii=False) + "\n")
