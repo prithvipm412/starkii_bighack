@@ -74,7 +74,8 @@ class Translator:
         import requests
         self.requests = requests
 
-    def __call__(self, text: str, retries: int = 5) -> str:
+    def __call__(self, text: str, retries: int = 8) -> str:
+        time.sleep(0.3)  # stay under Google's rate limit
         for attempt in range(retries):
             try:
                 r = self.requests.get(self.URL, params={"client": "gtx", "sl": "kn", "tl": "en", "dt": "t",
@@ -87,7 +88,7 @@ class Translator:
             except Exception as e:
                 if attempt == retries - 1:
                     raise RuntimeError(f"google kn->en failed: {type(e).__name__}") from e
-                time.sleep(2 * (attempt + 1))
+                time.sleep(min(60, 5 * 2 ** attempt))  # 5,10,20,40,60.. s backoff (HTTP 429)
         raise AssertionError("unreachable")
 
 
