@@ -36,6 +36,7 @@ git pull --rebase ; git add <your folders only> ; git commit -m "macN: <what>" ;
 Update status/macN.md (Done / Doing / Blocked / Next) and push at least every 2 hours.
 
 ## Long runs
+Python 3.12 everywhere: uv venv -p 3.12 .venv && uv pip install -r requirements.txt  (or python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt)
 caffeinate -dims python -m pipeline.run ... > logs/<name>.log 2>&1   (plugged in, lid open)
 
 ## Timeline (IST)
