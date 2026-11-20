@@ -1,0 +1,1 @@
+TUI-01 done: dashboard/index.html (all 4 views, navy theme, pilot/full toggle), dashboard/sample/results_sample.csv (15 360 rows, seed=42), dashboard/sample/generate_sample.py, dashboard/README.md. Open with: npx serve dashboard. Switch to real CSVs via header toggle once results/mac*/results.csv exist.
