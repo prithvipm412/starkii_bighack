@@ -30,6 +30,7 @@ Done:
 - MILESTONE: full loop on Qwen passed: 10 English prompts (5 harmful, 5 harmless) + kn/kn_latn/kn_mix of one harmful prompt, all 3 conditions, resume verified. CSVs in results/mac1/smoke/ (NOT real results; kept out of results/mac1/*.csv on purpose). ~75-90 tok/s on M5, batch 8.
 - Smoke numbers (32 direction prompts, layer 23/36, alpha 34.5, tau 12.4): none = 5/5 English harmful refused, 0/5 harmless refused, 0/3 Kannada variants refused. steer_always = 3/3 Kannada refused, but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada refused, 0/5 harmless refused, English untouched.
 - Projection at layer 23: English harmful ~42, English harmless 3-10, Kannada harmful ~15. Supports the "weak activation" hypothesis; motivated the tau change above.
+- mac1 .venv rebuilt on Python 3.12.16 from requirements.txt; smoke loop re-run on it, same refusals as before, ~85 tok/s.
 Doing:
 - Waiting for data_tools/output/direction.jsonl + pilot.jsonl (Phase 2).
 Blocked:
