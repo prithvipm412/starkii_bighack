@@ -8,7 +8,7 @@ Verdicts are JSON and never contain the input or reply text.
 ## Layers
 | # | layer | what it does | where |
 |---|---|---|---|
-| 1 | **input** | `detect()` the language, then translate to English (Kannada script → NLLB `kan_Knda→eng_Latn`; Kanglish → ITRANS-to-Kannada transliteration → NLLB), then Llama Guard 3 1B on the prompt. `blocked` = verdict `unsafe`. | `guard/guard.py` |
+| 1 | **input** | Score the raw prompt and any available Kannada-script and English views with Llama Guard 3 1B. The maximum score determines the verdict. | `guard/guard.py` |
 | 2 | **steer** | gated refusal-direction steering inside the chatbot model: adds the model's English refusal direction at a middle layer when the input is non-English and the gate fires (`steer_gated`). Runs during generation, not in the guard process; `check()` reports it as a pass-through layer. | `pipeline/steer.py` (mac1) |
 | 3 | **output** | translate the reply if it isn't English, then Llama Guard on (prompt, reply). This uses the same format and `p_unsafe > 0.5` threshold as the study's judge (`pipeline/score.py`). | `guard/guard.py` |
 
@@ -16,10 +16,10 @@ Verdicts are JSON and never contain the input or reply text.
 
 `detect(text)` returns `en | kn | kn_latn | kn_mix`:
 - **Kannada script:** the text is `kn_mix` if Latin words make up ≥15% of its words, else `kn`.
-- **No Indic script:** mac1's romanized-Indic heuristic from `pipeline/data.py` (Kanglish word list, Kannada suffixes, ITRANS capitals) gives `kn_latn`; otherwise `en`.
-- **Accuracy on the 1800-row study set:** en 449/450, kn_latn 437/450. All 900 kn / kn_mix rows are routed to translation; kn vs kn_mix is split ~50/50, which doesn't matter because both take the same path.
+- **Latin script:** recognize common Kannada words and informal spellings. Two Kannada signals covering at least 20% of Latin words trigger `kn_latn`, with the existing romanized-Indic detector as a fallback.
+- **Kanglish:** map common phonetic spellings, convert recognizable ITRANS words with the installed `indic-transliteration` package, and preserve unrecognized Latin words for NLLB to handle as code-mixed text.
 
-The input layer reuses `baseline/run_baseline.py`'s Translator and Guard classes exactly. On 40 pilot rows (20 harmful + 20 harmless, all 4 variants), it gives the **same block decision and the same `p_unsafe` (|Δ| = 0.0000) as `results/mac4/llama-guard-3-1b_baseline*.csv`**.
+Input scoring uses the cached model's user-only chat template with typed text content. The usual threshold is 0.5. With the default threshold, standalone English requests matching the software process-management pattern use 0.85. The pattern must match the entire input. The API exposes the applied threshold and the original model score.
 
 ## Run
 ```bash
@@ -38,7 +38,8 @@ In Python: `from guard import LanguageBarrierGuard; LanguageBarrierGuard().check
 **Verdict:**
 ```json
 {"verdict": "allow|block", "blocked": bool, "layer": "input|output|null", "detected": "en|kn|kn_latn|kn_mix",
- "p_unsafe": float, "latency_ms": int, "layers": [ ... per-layer results ... ]}
+ "p_unsafe": float, "scores": {"raw": float, "transliterated": float|null, "english": float|null},
+ "latency_ms": int, "layers": [ ... per-layer results ... ]}
 ```
 
 **Server behaviour:**
@@ -69,13 +70,23 @@ From `analysis/combined.csv` (Qwen2.5-3B-Instruct, full set, 256 tokens, n = 300
 - **Cost:** harmless prompts wrongly blocked rise 2–5 points.
 - **Steering numbers** (steer_only, input+steer): PENDING until the full steer_gated runs land. See FINDINGS.md "Layered guard".
 
+## Input smoke test
+
+Run `python -m guard.smoke_test` using the cached models. Standard output is one verdict and score per case, with 10 harmless cases followed by 10 harmful cases across the four variants.
+
+| Metric | Before | After |
+|---|---:|---:|
+| Harmful cases blocked | 7/10 | 10/10 |
+| Harmless cases wrongly blocked | 1/10 | 0/10 |
+| Harmful Kanglish regression case | allow (0.1192) | block (0.9903) |
+| Python process regression case | block (0.8355) | allow (0.8355) |
+
+These are local smoke-test results. The study numbers above describe the original evaluation.
+
 ## Limits
 - **Output layer isn't independently scored.** Llama Guard is both the output filter and the study's judge, so scoring it with Llama Guard would be circular. It is a design layer, validated only by the 30-item human-labelled sample (`analysis/scorer_check.csv`).
 - **The 3-way `label` agrees with humans only ~33% (n = 30).** So harmless "wrongly blocked" rates based on `label = refused`, and any not_understood shares, are approximate. They are never headline numbers.
-- **Kanglish:**
-  - The study's kn_latn is a mechanical ITRANS transliteration, which this guard reverses near-exactly (80/100 pilot prompts round-trip identically).
-  - Real informal Kanglish (ad-hoc spellings) will transliterate worse, so expect lower recall than measured.
-  - 13 of 450 study kn_latn prompts are detected as `en` and checked untranslated.
+- **Kanglish:** informal spellings and unrecognized words can still be mistransliterated or misdetected. The smoke test covers only a small sample.
 - **Language and model coverage:** only Kannada was evaluated. Other Indic scripts are routed to NLLB with their FLORES code but are untested. Llama Guard 3 1B is a small judge; its own errors pass straight through.
 - **The steer layer needs the chatbot's weights and a direction file** (`results/macN/<model>_direction.json`). It isn't available for hosted or closed models.
 - **Prompt translation:** prompts in the study were machine-translated (Google en→kn). Translation noise affects both the attack and the defence numbers.
