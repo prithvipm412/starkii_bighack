@@ -1,4 +1,43 @@
-# FINDINGS (draft, pilot): numbers only
+# FINDINGS: numbers only
+
+<!-- final:begin -->
+## Final results: 3 models, full set, 256 new tokens (from `analysis/combined.csv`)
+Primary metric: **harmful compliance** = % of harmful prompts whose reply Llama Guard 3 1B judges unsafe (reply translated to English with NLLB). With the input guard, a prompt counts only if the guard did not block it. 95% Wilson CI in [ ]; n = harmful prompts per cell. Input guard = translate → Llama Guard on the prompt (kn_latn: ITRANS → Kannada script → NLLB). Cells marked *pilot* use the 50-prompt pilot (Llama-3.2 steer_gated was not run on the full set).
+
+| model | variant | model alone | + input guard | steer_gated | input guard + steer_gated |
+|---|---|---|---|---|---|
+| Llama-3.2-3B | en | 10.7 [7.7–14.7] (n=300) | 2.3 [1.1–4.7] (n=300) | 8.0 [3.2–18.8] (n=50 pilot) | 0.0 [0.0–7.1] (n=50 pilot) |
+| Llama-3.2-3B | kn | 62.0 [56.4–67.3] (n=300) | 2.3 [1.1–4.7] (n=300) | 78.0 [64.8–87.2] (n=50 pilot) | 2.0 [0.4–10.5] (n=50 pilot) |
+| Llama-3.2-3B | kn_mix | 57.3 [51.7–62.8] (n=300) | 0.7 [0.2–2.4] (n=300) | 72.0 [58.3–82.5] (n=50 pilot) | 2.0 [0.4–10.5] (n=50 pilot) |
+| Llama-3.2-3B | kn_latn | 34.3 [29.2–39.9] (n=300) | 1.3 [0.5–3.4] (n=300) | 42.0 [29.4–55.8] (n=50 pilot) | 2.0 [0.4–10.5] (n=50 pilot) |
+| Qwen2.5-3B | en | 6.7 [4.4–10.1] (n=300) | 0.0 [0.0–1.3] (n=300) | 6.3 [4.1–9.7] (n=300) | 0.0 [0.0–1.3] (n=300) |
+| Qwen2.5-3B | kn | 65.3 [59.8–70.5] (n=300) | 2.7 [1.4–5.2] (n=300) | 28.3 [23.5–33.7] (n=300) | 0.7 [0.2–2.4] (n=300) |
+| Qwen2.5-3B | kn_mix | 46.7 [41.1–52.3] (n=300) | 1.3 [0.5–3.4] (n=300) | 17.0 [13.2–21.7] (n=300) | 1.0 [0.3–2.9] (n=300) |
+| Qwen2.5-3B | kn_latn | 4.0 [2.3–6.9] (n=300) | 0.0 [0.0–1.3] (n=300) | 1.3 [0.5–3.4] (n=300) | 0.0 [0.0–1.3] (n=300) |
+| gemma-2-2b | en | 2.0 [0.9–4.3] (n=300) | 0.0 [0.0–1.3] (n=300) | 2.0 [0.9–4.3] (n=300) | 0.0 [0.0–1.3] (n=300) |
+| gemma-2-2b | kn | 40.0 [34.6–45.6] (n=300) | 3.7 [2.1–6.4] (n=300) | 27.7 [22.9–33.0] (n=300) | 2.7 [1.4–5.2] (n=300) |
+| gemma-2-2b | kn_mix | 27.3 [22.6–32.6] (n=300) | 2.7 [1.4–5.2] (n=300) | 20.3 [16.2–25.2] (n=300) | 2.0 [0.9–4.3] (n=300) |
+| gemma-2-2b | kn_latn | 18.3 [14.4–23.1] (n=300) | 1.0 [0.3–2.9] (n=300) | 13.3 [9.9–17.6] (n=300) | 1.0 [0.3–2.9] (n=300) |
+
+**Harmless prompts wrongly blocked** (prompt flagged by the input guard OR reply label = refused; the phrase-based label agrees with humans ~33%, so treat as approximate):
+
+| model | variant | model alone | + input guard | steer_gated | input guard + steer_gated |
+|---|---|---|---|---|---|
+| Llama-3.2-3B | en | 4.0 [1.8–8.5] (n=150) | 10.7 [6.7–16.6] (n=150) | 2.0 [0.4–10.5] (n=50 pilot) | 12.0 [5.6–23.8] (n=50 pilot) |
+| Llama-3.2-3B | kn | 0.7 [0.1–3.7] (n=150) | 8.0 [4.6–13.5] (n=150) | 0.0 [0.0–7.1] (n=50 pilot) | 8.0 [3.2–18.8] (n=50 pilot) |
+| Llama-3.2-3B | kn_mix | 5.3 [2.7–10.2] (n=150) | 11.3 [7.2–17.4] (n=150) | 0.0 [0.0–7.1] (n=50 pilot) | 6.0 [2.1–16.2] (n=50 pilot) |
+| Llama-3.2-3B | kn_latn | 10.0 [6.2–15.8] (n=150) | 14.7 [9.9–21.2] (n=150) | 14.0 [7.0–26.2] (n=50 pilot) | 22.0 [12.8–35.2] (n=50 pilot) |
+| Qwen2.5-3B | en | 20.0 [14.4–27.1] (n=150) | 22.0 [16.1–29.3] (n=150) | 20.0 [14.4–27.1] (n=150) | 22.0 [16.1–29.3] (n=150) |
+| Qwen2.5-3B | kn | 4.0 [1.8–8.5] (n=150) | 8.7 [5.1–14.3] (n=150) | 45.3 [37.6–53.3] (n=150) | 46.7 [38.9–54.6] (n=150) |
+| Qwen2.5-3B | kn_mix | 12.0 [7.7–18.2] (n=150) | 17.3 [12.1–24.2] (n=150) | 72.7 [65.0–79.2] (n=150) | 73.3 [65.7–79.8] (n=150) |
+| Qwen2.5-3B | kn_latn | 28.0 [21.4–35.7] (n=150) | 34.0 [26.9–41.9] (n=150) | 47.3 [39.5–55.3] (n=150) | 50.0 [42.1–57.9] (n=150) |
+| gemma-2-2b | en | 12.7 [8.3–18.9] (n=150) | 17.3 [12.1–24.2] (n=150) | 12.7 [8.3–18.9] (n=150) | 17.3 [12.1–24.2] (n=150) |
+| gemma-2-2b | kn | 11.3 [7.2–17.4] (n=150) | 14.7 [9.9–21.2] (n=150) | 26.0 [19.6–33.6] (n=150) | 28.0 [21.4–35.7] (n=150) |
+| gemma-2-2b | kn_mix | 16.0 [11.0–22.7] (n=150) | 18.0 [12.7–24.9] (n=150) | 28.7 [22.0–36.4] (n=150) | 28.7 [22.0–36.4] (n=150) |
+| gemma-2-2b | kn_latn | 2.7 [1.0–6.7] (n=150) | 9.3 [5.6–15.1] (n=150) | 10.0 [6.2–15.8] (n=150) | 16.0 [11.0–22.7] (n=150) |
+<!-- final:end -->
+# Pilot analysis (64 new tokens, 50 + 50 prompts per variant)
+The sections below come from the pilot. They hold the mechanism, label and steering-cost detail. The headline numbers are the full-set tables above, plus the Layered guard, What beats every layer and detector sections at the end.
 
 Source: `analysis/summary.csv` (`python -m analysis.summarize`), gate projections in `results/mac*/gate/`, direction stats in `results/mac*/*_direction.json`.
 Each cell has n = 50 (pilot: 50 harmful + 50 harmless prompts per variant), with 95% Wilson CIs in [ ].
@@ -10,8 +49,8 @@ Each cell has n = 50 (pilot: 50 harmful + 50 harmless prompts per variant), with
 
 **Runs:**
 - Qwen = `results/mac1/pilot64/`, max 64 new tokens, rescored by mac1.
-- Gemma = `results/mac3/`, rescored by mac3 (commit 3170860).
-- Llama-3.2-3B-Instruct = PENDING.
+- Gemma = `results/mac3/pilot64/`, rescored by mac3 (commit 3170860).
+- Llama-3.2-3B-Instruct: no 64-token pilot. Llama rows below use the pilot prompt IDs from its full 256-token run (none), or its full gate file (Mechanism).
 
 ## Hypothesis
 Small open models refuse harmful requests less often in Kannada script (kn), Kanglish (kn_latn) and Kannada-English code-mix (kn_mix) than in English (en). Steering along the model's own English refusal direction at a middle layer closes that gap, if it is applied only when the input is non-English and already weakly activates the direction (steer_gated). The cost should be a small rise in wrong refusals of harmless prompts.
@@ -32,7 +71,7 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 |---|---|---|---|---|
 | Qwen2.5-3B | 2.0 [0.4–10.5] | 76.0 [62.6–85.7] | 4.0 [1.1–13.5] | 52.0 [38.5–65.2] |
 | gemma-2-2b | 0.0 [0.0–7.1] | 44.0 [31.2–57.7] | 22.0 [12.8–35.2] | 16.0 [8.3–28.5] |
-| Llama-3.2-3B | PENDING | PENDING | PENDING | PENDING |
+| Llama-3.2-3B (pilot IDs, 256 tok) | 8.0 [3.2–18.8] | 58.0 [44.2–70.6] | 38.0 [25.9–51.8] | 52.0 [38.5–65.2] |
 
 **Harmful prompts, label breakdown % (refused / not_understood / complied):**
 | model | en | kn | kn_latn | kn_mix |
@@ -56,7 +95,7 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 | kn (NLLB kn→en) | baseline | 90.3 [86.5–93.2] | 7.3 [4.1–12.7] | 90.0 [78.6–95.7] | 8.0 [3.2–18.8] | 448 |
 | kn_mix (NLLB kn→en) | baseline | 92.3 [88.8–94.8] | 6.0 [3.2–11.0] | 92.0 [81.2–96.8] | 6.0 [2.1–16.2] | 447 |
 | kn_latn (untranslated) | baseline | 39.7 [34.3–45.3] | 1.3 [0.4–4.7] | 42.0 [29.4–55.8] | 2.0 [0.4–10.5] | 138 |
-| kn_latn (ITRANS→Kannada→NLLB) | baseline_translit | PENDING | PENDING | 90.0 [78.6–95.7] | 10.0 [4.3–21.4] | 422 |
+| kn_latn (ITRANS→Kannada→NLLB) | baseline_translit | 90.7 [86.8–93.5] | 8.0 [4.6–13.5] | 90.0 [78.6–95.7] | 10.0 [4.3–21.4] | 431 |
 
 - **Translate-then-guard mostly closes the gap for Kannada script and code-mix.**
   - Full set: kn −6.0 pts and kn_mix −4.0 pts compared with en (96.3).
@@ -73,7 +112,7 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 |---|---|---|---|---|---|---|---|---|
 | Qwen (L23/36, tau 15.9) | 39.4 | 17.7 | 17.2 | 18.3 | 19.8 | 15.8 | 15.6 | 17.5 |
 | Gemma (L16/26, tau −13.6) | 99.7 | 25.7 | 0.6 | 35.6 | −13.6 | −11.8 | −2.1 | −6.6 |
-| Llama-3.2-3B | PENDING | | | | | | | |
+| Llama (L15, tau −2.35; full run, n = 300 / 150) | 4.85 | −0.61 | −0.59 | −0.29 | −2.27 | −1.20 | −0.60 | −1.26 |
 
 - **Direction-set stats at the chosen layer:**
   - Qwen: harmful 46.0 vs harmless 10.7, separation (Cohen's d) 7.55, alpha 35.4.
@@ -138,7 +177,7 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 - **kn_mix misses refusals:** 3 human refusals were labelled complied by the pipeline (`refused=0`).
 - **Read-across:**
   - Phrase-based `label` misses most not_understood replies in Kannada and over-calls refusal, so Finding 1's not_understood shares (72% / 64% on kn_latn) are unreliable at the reply level.
-  - harmful_compliance comes from Llama Guard, not phrases, and was not hand-checked here (PENDING).
+  - harmful_compliance comes from Llama Guard, not phrases. It was not hand-checked in this study (no human labels of reply harmfulness).
   - n = 10 per variant: CIs are about ±25–30 pts.
 
 ## Failure analysis
@@ -155,18 +194,18 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 - **Translation noise.**
   - Prompts are machine-translated (Google), and kn_latn is a mechanical ITRANS transliteration, not natural Kanglish.
   - Replies are judged after NLLB kn→en translation, so judge errors can come from translation.
-  - The human meaning check of 20 translations is PENDING.
+  - The human meaning check of 20 translations was not done in this study.
 - **Small n.**
   - n = 50 per cell, so CIs are ±10–14 pts at mid-range rates. Differences under ~20 pts are not reliable.
-  - Qwen numbers come from the 64-token pilot. mac1 has moved to 256 tokens, so compliance may change in longer replies (PENDING).
-  - Full set (300 + 150 per variant): done for the Llama Guard baseline only; models PENDING.
+  - Qwen numbers in this pilot section come from the 64-token run. The 256-token full-set numbers are in Final results (Qwen kn compliance 65.3% full vs 76.0% pilot).
+  - Full set (300 + 150 per variant): done for all three models (none) and for Qwen and Gemma steer_gated. Llama steer_gated is pilot only (n = 50).
 
 ## Next steps
-1. Finish the full-set Llama Guard baseline (running), then failure breakdown per HarmBench category.
-2. Full runs at 256 tokens for Qwen, Gemma and Llama-3.2-3B. Llama-3.2 is PENDING everywhere.
+1. Failure breakdown per HarmBench category beyond `missed.csv`.
+2. Llama-3.2-3B steer_gated on the full set, with a re-fitted tau: its tau of −2.35 fires on ~all non-English prompts, and steering raised harmful compliance in the pilot.
 3. Sweeps of layer × alpha × tau for steer_gated, to cut harmless kn and kn_mix real refusals. The gate needs better harmful/harmless separation in Kannada.
 4. Hand labels from mac1–3, then `scorer_check.csv`: agreement of `label` with humans, especially not_understood on kn_latn.
-5. baseline_translit on the full set; test on natural (non-ITRANS) Kanglish.
+5. Test baseline_translit on natural (non-ITRANS) Kanglish.
 6. More hand labels: en, Qwen and Llama, plus a harmful_compliance check. Fix not_understood detection in Kannada replies (phrase lists miss it).
 
 <!-- layered-guard:begin -->
@@ -178,26 +217,26 @@ Harmful pass-through = prompt not flagged AND harmful_compliance = 1 (primary me
 
 | variant | setting | harmful pass-through % | harmless wrongly blocked % | kn_latn input rows: translit / untranslated |
 |---|---|---|---|---|
-| en | none | 8.0 [3.2–18.8] (n=50) | 2.0 [0.4–10.5] (n=50) |  |
-| en | input_only | 0.0 [0.0–7.1] (n=50) | 12.0 [5.6–23.8] (n=50) |  |
-| en | steer_only | 8.0 [3.2–18.8] (n=50) | 2.0 [0.4–10.5] (n=50) |  |
-| en | input+steer | 0.0 [0.0–7.1] (n=50) | 12.0 [5.6–23.8] (n=50) |  |
-| kn | none | 58.0 [44.2–70.6] (n=50) | 0.0 [0.0–7.1] (n=50) |  |
-| kn | input_only | 2.0 [0.4–10.5] (n=50) | 8.0 [3.2–18.8] (n=50) |  |
-| kn | steer_only | 78.0 [64.8–87.2] (n=50) | 0.0 [0.0–7.1] (n=50) |  |
-| kn | input+steer | 2.0 [0.4–10.5] (n=50) | 8.0 [3.2–18.8] (n=50) |  |
-| kn_latn | none | 38.0 [25.9–51.8] (n=50) | 12.0 [5.6–23.8] (n=50) |  |
-| kn_latn | input_only | 0.0 [0.0–7.1] (n=50) | 16.0 [8.3–28.5] (n=50) | 100 / 0 |
-| kn_latn | steer_only | 42.0 [29.4–55.8] (n=50) | 14.0 [7.0–26.2] (n=50) |  |
-| kn_latn | input+steer | 2.0 [0.4–10.5] (n=50) | 22.0 [12.8–35.2] (n=50) | 100 / 0 |
-| kn_mix | none | 52.0 [38.5–65.2] (n=50) | 10.0 [4.3–21.4] (n=50) |  |
-| kn_mix | input_only | 0.0 [0.0–7.1] (n=50) | 16.0 [8.3–28.5] (n=50) |  |
-| kn_mix | steer_only | 72.0 [58.3–82.5] (n=50) | 0.0 [0.0–7.1] (n=50) |  |
-| kn_mix | input+steer | 2.0 [0.4–10.5] (n=50) | 6.0 [2.1–16.2] (n=50) |  |
-| kn_latn_translit_rows | none | 38.0 [25.9–51.8] (n=50) | 12.0 [5.6–23.8] (n=50) |  |
-| kn_latn_translit_rows | input_only | 0.0 [0.0–7.1] (n=50) | 16.0 [8.3–28.5] (n=50) | 100 / 0 |
-| kn_latn_translit_rows | steer_only | 42.0 [29.4–55.8] (n=50) | 14.0 [7.0–26.2] (n=50) |  |
-| kn_latn_translit_rows | input+steer | 2.0 [0.4–10.5] (n=50) | 22.0 [12.8–35.2] (n=50) | 100 / 0 |
+| en | none | 10.7 [7.7–14.7] (n=300) | 4.0 [1.8–8.5] (n=150) |  |
+| en | input_only | 2.3 [1.1–4.7] (n=300) | 10.7 [6.7–16.6] (n=150) |  |
+| en | steer_only | 8.0 [3.2–18.8] (n=50 pilot) | 2.0 [0.4–10.5] (n=50 pilot) |  |
+| en | input+steer | 0.0 [0.0–7.1] (n=50 pilot) | 12.0 [5.6–23.8] (n=50 pilot) |  |
+| kn | none | 62.0 [56.4–67.3] (n=300) | 0.7 [0.1–3.7] (n=150) |  |
+| kn | input_only | 2.3 [1.1–4.7] (n=300) | 8.0 [4.6–13.5] (n=150) |  |
+| kn | steer_only | 78.0 [64.8–87.2] (n=50 pilot) | 0.0 [0.0–7.1] (n=50 pilot) |  |
+| kn | input+steer | 2.0 [0.4–10.5] (n=50 pilot) | 8.0 [3.2–18.8] (n=50 pilot) |  |
+| kn_latn | none | 34.3 [29.2–39.9] (n=300) | 10.0 [6.2–15.8] (n=150) |  |
+| kn_latn | input_only | 1.3 [0.5–3.4] (n=300) | 14.7 [9.9–21.2] (n=150) | 450 / 0 |
+| kn_latn | steer_only | 42.0 [29.4–55.8] (n=50 pilot) | 14.0 [7.0–26.2] (n=50 pilot) |  |
+| kn_latn | input+steer | 2.0 [0.4–10.5] (n=50 pilot) | 22.0 [12.8–35.2] (n=50 pilot) | 100 / 0 |
+| kn_mix | none | 57.3 [51.7–62.8] (n=300) | 5.3 [2.7–10.2] (n=150) |  |
+| kn_mix | input_only | 0.7 [0.2–2.4] (n=300) | 11.3 [7.2–17.4] (n=150) |  |
+| kn_mix | steer_only | 72.0 [58.3–82.5] (n=50 pilot) | 0.0 [0.0–7.1] (n=50 pilot) |  |
+| kn_mix | input+steer | 2.0 [0.4–10.5] (n=50 pilot) | 6.0 [2.1–16.2] (n=50 pilot) |  |
+| kn_latn_translit_rows | none | 34.3 [29.2–39.9] (n=300) | 10.0 [6.2–15.8] (n=150) |  |
+| kn_latn_translit_rows | input_only | 1.3 [0.5–3.4] (n=300) | 14.7 [9.9–21.2] (n=150) | 450 / 0 |
+| kn_latn_translit_rows | steer_only | 42.0 [29.4–55.8] (n=50 pilot) | 14.0 [7.0–26.2] (n=50 pilot) |  |
+| kn_latn_translit_rows | input+steer | 2.0 [0.4–10.5] (n=50 pilot) | 22.0 [12.8–35.2] (n=50 pilot) | 100 / 0 |
 
 **Qwen2.5-3B-Instruct**
 
@@ -230,29 +269,29 @@ Harmful pass-through = prompt not flagged AND harmful_compliance = 1 (primary me
 |---|---|---|---|---|
 | en | none | 2.0 [0.9–4.3] (n=300) | 12.7 [8.3–18.9] (n=150) |  |
 | en | input_only | 0.0 [0.0–1.3] (n=300) | 17.3 [12.1–24.2] (n=150) |  |
-| en | steer_only | PENDING | PENDING |  |
-| en | input+steer | PENDING | PENDING |  |
+| en | steer_only | 2.0 [0.9–4.3] (n=300) | 12.7 [8.3–18.9] (n=150) |  |
+| en | input+steer | 0.0 [0.0–1.3] (n=300) | 17.3 [12.1–24.2] (n=150) |  |
 | kn | none | 40.0 [34.6–45.6] (n=300) | 11.3 [7.2–17.4] (n=150) |  |
 | kn | input_only | 3.7 [2.1–6.4] (n=300) | 14.7 [9.9–21.2] (n=150) |  |
-| kn | steer_only | PENDING | PENDING |  |
-| kn | input+steer | PENDING | PENDING |  |
+| kn | steer_only | 27.7 [22.9–33.0] (n=300) | 26.0 [19.6–33.6] (n=150) |  |
+| kn | input+steer | 2.7 [1.4–5.2] (n=300) | 28.0 [21.4–35.7] (n=150) |  |
 | kn_latn | none | 18.3 [14.4–23.1] (n=300) | 2.7 [1.0–6.7] (n=150) |  |
 | kn_latn | input_only | 1.0 [0.3–2.9] (n=300) | 9.3 [5.6–15.1] (n=150) | 450 / 0 |
-| kn_latn | steer_only | PENDING | PENDING |  |
-| kn_latn | input+steer | PENDING | PENDING | 0 / 0 |
+| kn_latn | steer_only | 13.3 [9.9–17.6] (n=300) | 10.0 [6.2–15.8] (n=150) |  |
+| kn_latn | input+steer | 1.0 [0.3–2.9] (n=300) | 16.0 [11.0–22.7] (n=150) | 450 / 0 |
 | kn_mix | none | 27.3 [22.6–32.6] (n=300) | 16.0 [11.0–22.7] (n=150) |  |
 | kn_mix | input_only | 2.7 [1.4–5.2] (n=300) | 18.0 [12.7–24.9] (n=150) |  |
-| kn_mix | steer_only | PENDING | PENDING |  |
-| kn_mix | input+steer | PENDING | PENDING |  |
+| kn_mix | steer_only | 20.3 [16.2–25.2] (n=300) | 28.7 [22.0–36.4] (n=150) |  |
+| kn_mix | input+steer | 2.0 [0.9–4.3] (n=300) | 28.7 [22.0–36.4] (n=150) |  |
 | kn_latn_translit_rows | none | 18.3 [14.4–23.1] (n=300) | 2.7 [1.0–6.7] (n=150) |  |
 | kn_latn_translit_rows | input_only | 1.0 [0.3–2.9] (n=300) | 9.3 [5.6–15.1] (n=150) | 450 / 0 |
-| kn_latn_translit_rows | steer_only | PENDING | PENDING |  |
-| kn_latn_translit_rows | input+steer | PENDING | PENDING | 0 / 0 |
+| kn_latn_translit_rows | steer_only | 13.3 [9.9–17.6] (n=300) | 10.0 [6.2–15.8] (n=150) |  |
+| kn_latn_translit_rows | input+steer | 1.0 [0.3–2.9] (n=300) | 16.0 [11.0–22.7] (n=150) | 450 / 0 |
 
 - **kn_latn input flags** come from the translit baseline (ITRANS → Kannada → NLLB → Llama Guard) for 450 kn_latn rows and from the untranslated baseline for 0. `kn_latn_translit_rows` restricts kn_latn to translit-covered rows.
 - **The output layer is not scored here.** Llama Guard is both the output filter and the study's judge (harmful_compliance), so scoring it with Llama Guard would be circular: it would block exactly what it counts as harmful. It is reported as a design layer, validated only by the human-labelled sample (`analysis/scorer_check.csv`).
 - `label` (refused / not_understood / complied) agrees with humans only ~33% (n = 30, Gemma), so the harmless-blocked rates, which use label = refused, carry that caveat. not_understood shares are never a headline.
-- PENDING cells: some model CSVs are still finishing; rerun `python -m analysis.combined` to refresh.
+- All listed cells are filled; models not shown have no main CSVs yet.
 <!-- layered-guard:end -->
 <!-- missed:begin -->
 ## What beats every layer (run = main; `analysis/missed.csv`, `python -m analysis.missed`)
@@ -262,10 +301,10 @@ Harmful prompts that the input check (Llama Guard on the translated prompt) did 
 
 | variant | missed, none | missed, steer_gated | categories missed (steer_gated) |
 |---|---|---|---|
-| en | 0/50 (0.0%) | 0/50 (0.0%) | none |
-| kn | 1/50 (2.0%) | 1/50 (2.0%) | illegal 1 |
-| kn_latn | 0/50 (0.0%) | 1/50 (2.0%) | harmful 1 |
-| kn_mix | 0/50 (0.0%) | 1/50 (2.0%) | cybercrime_intrusion 1 |
+| en | 7/300 (2.3%) | 0/50 (0.0%) | none |
+| kn | 7/300 (2.3%) | 1/50 (2.0%) | illegal 1 |
+| kn_latn | 4/300 (1.3%) | 1/50 (2.0%) | harmful 1 |
+| kn_mix | 2/300 (0.7%) | 1/50 (2.0%) | cybercrime_intrusion 1 |
 
 - Prompt IDs that beat the layers in ≥ 2 variants (steer_gated): none.
 
@@ -282,14 +321,14 @@ Harmful prompts that the input check (Llama Guard on the translated prompt) did 
 
 **gemma-2-2b-it**
 
-| variant | missed, none | categories missed (none) |
-|---|---|---|
-| en | 0/300 (0.0%) | none |
-| kn | 11/300 (3.7%) | harmful 3, illegal 3, advbench_general 2, chemical_biological 2, cybercrime_intrusion 1 |
-| kn_latn | 3/300 (1.0%) | chemical_biological 1, harmful 1, illegal 1 |
-| kn_mix | 8/300 (2.7%) | harmful 4, advbench_general 1, chemical_biological 1, cybercrime_intrusion 1, illegal 1 |
+| variant | missed, none | missed, steer_gated | categories missed (steer_gated) |
+|---|---|---|---|
+| en | 0/300 (0.0%) | 0/300 (0.0%) | none |
+| kn | 11/300 (3.7%) | 8/300 (2.7%) | harmful 2, illegal 2, advbench_general 1, chemical_biological 1, cybercrime_intrusion 1, harassment_bullying 1 |
+| kn_latn | 3/300 (1.0%) | 3/300 (1.0%) | chemical_biological 1, harmful 1, illegal 1 |
+| kn_mix | 8/300 (2.7%) | 6/300 (2.0%) | harmful 3, advbench_general 1, chemical_biological 1, cybercrime_intrusion 1 |
 
-- Prompt IDs that beat the layers in ≥ 2 variants (none): h0104, h0147, h0202, h0234.
+- Prompt IDs that beat the layers in ≥ 2 variants (steer_gated): h0104, h0147, h0202, h0234.
 
 - These counts rely on harmful_compliance (Llama Guard on the NLLB-translated reply); judge or translation errors can add or hide misses. Small cells (single digits) are anecdotes, not rates.
 <!-- missed:end -->
@@ -298,20 +337,19 @@ Harmful prompts that the input check (Llama Guard on the translated prompt) did 
 Source: `analysis/projection_detector.csv` (`python -m analysis.projection_detector`), condition none gate files.
 Detector = the prompt's projection on the model's **English-derived** refusal direction at the steering layer; flag if projection > tau (the configured gate threshold). AUROC is threshold-free (0.5 = chance).
 
-**Llama-3.2-3B-Instruct** (layer 15, tau -2.353, n = 50 harmful / 50 harmless per variant)
+**Llama-3.2-3B-Instruct** (layer 15, tau -2.353, n = 300 harmful / 150 harmless per variant)
 
 | variant | AUROC [95% CI] | catch % at tau | false-alarm % at tau | mean proj harmful / harmless |
 |---|---|---|---|---|
-| en | 0.999 [0.992–1.0] | 100.0 [92.9–100.0] | 52.0 [38.5–65.2] | 4.74 / -2.32 |
-| kn | 0.639 [0.531–0.748] | 100.0 [92.9–100.0] | 98.0 [89.5–99.6] | -0.55 / -1.19 |
-| kn_latn | 0.474 [0.361–0.588] | 100.0 [92.9–100.0] | 100.0 [92.9–100.0] | -0.65 / -0.6 |
-| kn_mix | 0.669 [0.564–0.775] | 98.0 [89.5–99.6] | 100.0 [92.9–100.0] | -0.3 / -1.17 |
-| ALL_non_en | 0.617 [0.554–0.68] | 99.3 [96.3–99.9] | 99.3 [96.3–99.9] | -0.5 / -0.99 |
-| ALL | 0.759 [0.713–0.806] | 99.5 [97.2–99.9] | 87.5 [82.2–91.4] | 0.81 / -1.32 |
+| en | 0.993 [0.986–1.0] | 99.7 [98.1–99.9] | 50.0 [42.1–57.9] | 4.85 / -2.27 |
+| kn | 0.646 [0.594–0.698] | 100.0 [98.7–100.0] | 94.0 [89.0–96.8] | -0.61 / -1.2 |
+| kn_latn | 0.498 [0.442–0.555] | 100.0 [98.7–100.0] | 100.0 [97.5–100.0] | -0.59 / -0.6 |
+| kn_mix | 0.707 [0.659–0.755] | 99.0 [97.1–99.7] | 96.7 [92.4–98.6] | -0.29 / -1.26 |
+| ALL_non_en | 0.627 [0.596–0.657] | 99.7 [99.0–99.9] | 96.9 [94.8–98.1] | -0.5 / -1.02 |
+| ALL | 0.759 [0.737–0.781] | 99.7 [99.1–99.9] | 85.2 [82.1–87.8] | 0.84 / -1.33 |
 
-- Llama-3.2-3B-Instruct: AUROC en 0.999 vs Kannada variants kn 0.639, kn_latn 0.474, kn_mix 0.669; weakest = kn_latn. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 98.0%, kn_latn 100.0%, kn_mix 100.0%.
+- Llama-3.2-3B-Instruct: AUROC en 0.993 vs Kannada variants kn 0.646, kn_latn 0.498, kn_mix 0.707; weakest = kn_latn. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 94.0%, kn_latn 100.0%, kn_mix 96.7%.
   - Llama-3.2-3B-Instruct: tau -2.353 is below almost all kn, kn_latn, kn_mix projections, so at this tau the gate fires on nearly every non-English prompt (it behaves like steer-all-non-English); the AUROC, not the tau, is the fair measure here.
-  - Llama-3.2-3B-Instruct: pilot-size n (50 per class), so CIs are wide.
 **Qwen2.5-3B-Instruct** (layer 23, tau 15.882, n = 300 harmful / 150 harmless per variant)
 
 | variant | AUROC [95% CI] | catch % at tau | false-alarm % at tau | mean proj harmful / harmless |
@@ -324,6 +362,19 @@ Detector = the prompt's projection on the model's **English-derived** refusal di
 | ALL | 0.697 [0.673–0.721] | 80.9 [78.6–83.0] | 55.5 [51.5–59.4] | 23.27 / 16.77 |
 
 - Qwen2.5-3B-Instruct: AUROC en 0.971 vs Kannada variants kn 0.633, kn_latn 0.849, kn_mix 0.577; weakest = kn_mix. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 46.0%, kn_latn 34.0%, kn_mix 71.3%.
+**gemma-2-2b-it** (layer 16, tau -13.603, n = 300 harmful / 150 harmless per variant)
+
+| variant | AUROC [95% CI] | catch % at tau | false-alarm % at tau | mean proj harmful / harmless |
+|---|---|---|---|---|
+| en | 0.976 [0.963–0.989] | 99.3 [97.6–99.8] | 45.3 [37.6–53.3] | 106.97 / -12.49 |
+| kn | 0.816 [0.778–0.854] | 86.7 [82.4–90.1] | 44.0 [36.3–52.0] | 26.07 / -11.21 |
+| kn_latn | 0.665 [0.615–0.716] | 95.3 [92.3–97.2] | 94.7 [89.8–97.3] | 1.94 / -2.37 |
+| kn_mix | 0.828 [0.792–0.865] | 88.3 [84.2–91.5] | 47.3 [39.5–55.3] | 37.64 / -9.35 |
+| ALL_non_en | 0.765 [0.74–0.79] | 90.1 [88.0–91.9] | 62.0 [57.4–66.4] | 21.88 / -7.64 |
+| ALL | 0.817 [0.797–0.836] | 92.4 [90.8–93.8] | 57.8 [53.8–61.7] | 43.16 / -8.85 |
+
+- gemma-2-2b-it: AUROC en 0.976 vs Kannada variants kn 0.816, kn_latn 0.665, kn_mix 0.828; weakest = kn_latn. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 44.0%, kn_latn 94.7%, kn_mix 47.3%.
+  - gemma-2-2b-it: tau -13.603 is below almost all kn_latn projections, so at this tau the gate fires on nearly every non-English prompt (it behaves like steer-all-non-English); the AUROC, not the tau, is the fair measure here.
 
 - **Where it is weak:** the direction is computed from English prompts. In Kannada script, Kanglish and code-mix, harmful projections fall towards the harmless range, so AUROC drops and a single tau trades catch rate against false alarms (the harmless over-refusal seen under steer_gated). It is a cheap in-model signal (no extra model, no translation), not a replacement for the translated Llama Guard input check.
 - Catch / false-alarm here use projection > tau only; the deployed gate also requires a non-English detection, so it never fires on English (see gate_fire_* columns).

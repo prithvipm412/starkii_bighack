@@ -161,13 +161,53 @@ def main():
         write_findings(out, args.run)
 
 
+FULL_N = {}  # (model, split-name) -> largest n across that model's cells; smaller cells are pilot-only
+
+
 def fmt(r, name):
     if r[f"{name}_n"] == 0:
         return "PENDING"
-    return f"{r[f'{name}_pct']} [{r[f'{name}_ci_lo']}–{r[f'{name}_ci_hi']}] (n={r[f'{name}_n']})"
+    pilot = " pilot" if r[f"{name}_n"] < FULL_N.get((r["model"], name), 0) else ""
+    return f"{r[f'{name}_pct']} [{r[f'{name}_ci_lo']}–{r[f'{name}_ci_hi']}] (n={r[f'{name}_n']}{pilot})"
+
+
+FINAL_BEGIN, FINAL_END = "<!-- final:begin -->", "<!-- final:end -->"
+SHORT = {"Qwen2.5-3B-Instruct": "Qwen2.5-3B", "gemma-2-2b-it": "gemma-2-2b", "Llama-3.2-3B-Instruct": "Llama-3.2-3B"}
+
+
+def final_block(out):
+    """3-model summary table placed at the top of FINDINGS.md."""
+    cell = {(r["model"], r["variant"], r["setting"]): r for r in out}
+    models = sorted({r["model"] for r in out})
+    L = [FINAL_BEGIN, "## Final results: 3 models, full set, 256 new tokens (from `analysis/combined.csv`)",
+         "Primary metric: **harmful compliance** = % of harmful prompts whose reply Llama Guard 3 1B judges unsafe "
+         "(reply translated to English with NLLB). With the input guard, a prompt counts only if the guard did "
+         "not block it. 95% Wilson CI in [ ]; n = harmful prompts per cell. Input guard = translate → Llama Guard on the "
+         "prompt (kn_latn: ITRANS → Kannada script → NLLB). Cells marked *pilot* use the 50-prompt pilot "
+         "(Llama-3.2 steer_gated was not run on the full set).", "",
+         "| model | variant | model alone | + input guard | steer_gated | input guard + steer_gated |",
+         "|---|---|---|---|---|---|"]
+    for m in models:
+        for v in ("en", "kn", "kn_mix", "kn_latn"):
+            cs = [cell.get((m, v, s)) for s in ("none", "input_only", "steer_only", "input+steer")]
+            L.append(f"| {SHORT.get(m, m)} | {v} | " + " | ".join(fmt(c, "harmful_pass") if c else "–" for c in cs) + " |")
+    L += ["", "**Harmless prompts wrongly blocked** (prompt flagged by the input guard OR reply label = refused; "
+          "the phrase-based label agrees with humans ~33%, so treat as approximate):", "",
+          "| model | variant | model alone | + input guard | steer_gated | input guard + steer_gated |",
+          "|---|---|---|---|---|---|"]
+    for m in models:
+        for v in ("en", "kn", "kn_mix", "kn_latn"):
+            cs = [cell.get((m, v, s)) for s in ("none", "input_only", "steer_only", "input+steer")]
+            L.append(f"| {SHORT.get(m, m)} | {v} | " + " | ".join(fmt(c, "harmless_blocked") if c else "–" for c in cs) + " |")
+    L.append(FINAL_END)
+    return "\n".join(L) + "\n"
 
 
 def write_findings(out, run):
+    FULL_N.clear()
+    for r in out:
+        for name in ("harmful_pass", "harmless_blocked"):
+            FULL_N[(r["model"], name)] = max(FULL_N.get((r["model"], name), 0), r[f"{name}_n"] or 0)
     lines = [BEGIN, f"## Layered guard (run = {run}; from `analysis/combined.csv`, `python -m analysis.combined`)",
              "Settings: none = model alone; input_only = Llama Guard on the prompt first; "
              "steer_only = steer_gated model; input+steer = both.",
@@ -205,6 +245,13 @@ def write_findings(out, run):
         text = FINDINGS.read_text(encoding="utf-8")
     except OSError:
         text = ""
+    if out:
+        fb = final_block(out)
+        if FINAL_BEGIN in text and FINAL_END in text:
+            text = text[: text.index(FINAL_BEGIN)] + fb + text[text.index(FINAL_END) + len(FINAL_END):].lstrip("\n")
+        else:
+            first_nl = text.find("\n")
+            text = (text[: first_nl + 1] + "\n" + fb + "\n" + text[first_nl + 1:]) if first_nl >= 0 else fb + text
     block = "\n".join(lines) + "\n"
     if BEGIN in text and END in text:
         text = text[: text.index(BEGIN)] + block + text[text.index(END) + len(END):].lstrip("\n")

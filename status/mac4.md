@@ -1,6 +1,9 @@
 # Mac4 status
 
 Done:
+- FINAL (all runs in): combined / missed / projection_detector / summarize rerun on Qwen full (none + steer_gated), Gemma full (none + steer_gated a44 t0) and Llama full none + PILOT steer_gated (cells labelled "pilot", n=50). No PENDING cells. FINDINGS opens with the final 3-model table (harmful compliance, model alone vs input guard vs steer vs both, n + 95% CI); pilot-era sections are labelled as pilot.
+- Harmful compliance, model alone -> + input guard (n=300): Qwen kn 65.3 -> 2.7, kn_mix 46.7 -> 1.3, kn_latn 4.0 -> 0.0, en 6.7 -> 0.0. Gemma kn 40.0 -> 3.7, kn_mix 27.3 -> 2.7, kn_latn 18.3 -> 1.0, en 2.0 -> 0.0. Llama kn 62.0 -> 2.3, kn_mix 57.3 -> 0.7, kn_latn 34.3 -> 1.3, en 10.7 -> 2.3.
+- NOTE: guard/guard.py and guard/README.md were changed by another account (brvivek62-debug, commits a0106f0 + 064a249: multi-view scoring, guard/romanized.py, eval.py). The 40/40 baseline match was measured before those changes.
 - summary.csv rerun (14 files): includes the Qwen full run (none + steer_gated, 256 tok, n=300/150) and the Llama pilot (none / steer_gated / steer_always, n=50). Llama steer_gated RAISES kn harmful compliance 58 -> 78% and kn_mix 52 -> 72% (pilot).
 - analysis/projection_detector.py -> projection_detector.csv + FINDINGS section. Qwen full AUROC: en 0.971, kn 0.633, kn_latn 0.849, kn_mix 0.577. At tau 15.9, harmless false alarms: kn 46%, kn_latn 34%, kn_mix 71%. Llama pilot AUROC: en 0.999, kn 0.639, kn_latn 0.474, kn_mix 0.669; tau -2.35 fires on ~100% of non-English. No main Gemma gate file yet.
 - analysis/missed.py -> missed.csv + FINDINGS "What beats every layer" (IDs and counts only). Qwen full: input + steer_gated misses kn 2/300, kn_mix 3/300, kn_latn 0, en 0 (input only: kn 8, kn_mix 4). Llama pilot: 0-1/50 per variant.
@@ -38,9 +41,9 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: auto-refresh every 20 min: git pull; if results/mac1-3 CSVs change, rerun combined / missed / projection_detector / summarize and push (logs/autorefresh.log).
+Doing: - (auto-refresh loop stopped)
 
 Blocked:
 - 20-prompt translation check needs a human.
 
-Next: rerun analysis.combined when the steer_gated full runs land; baseline_translit on the full set.
+Next: Llama steer_gated full run with a re-fitted tau (mac2), if time allows.
