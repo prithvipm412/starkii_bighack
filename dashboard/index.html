@@ -164,6 +164,8 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
   <select id="f-model"><option value="all">All models</option></select>
   <label>Variant</label>
   <select id="f-variant"><option value="all">All variants</option></select>
+  <label>Category</label>
+  <select id="f-category"><option value="all">All categories</option></select>
 </div>
 
 <!-- ── VIEWS ───────────────────────────────────────────────── -->
@@ -223,7 +225,13 @@ tbody tr:hover{background:rgba(79,131,247,.06)}
 <script>
 // ── CONFIG ────────────────────────────────────────────────────────
 const SAMPLE_CSV = 'sample/results_sample.csv';
-const REAL_GLOB  = ['../results/mac1/','../results/mac2/','../results/mac3/','../results/mac4/'];
+// Real CSVs: results/mac*/  — named <model>_<condition>.csv per AGENTS.md
+// We try a directory listing trick: fetch the directory page and parse hrefs.
+// Falls back to a fixed candidate list for servers that don't expose listings.
+const REAL_DIRS  = ['../results/mac1/','../results/mac2/','../results/mac3/','../results/mac4/'];
+
+// Exact required header — CSVs with any other header are silently skipped
+const REQUIRED_HEADER = 'prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit';
 
 const VARIANTS   = ['en','kn','kn_latn','kn_mix'];
 const CONDITIONS = ['none','baseline','steer_always','steer_gated'];
@@ -253,6 +261,7 @@ let charts  = {};
 // ── BOOT ──────────────────────────────────────────────────────────
 document.getElementById('f-model').addEventListener('change', render);
 document.getElementById('f-variant').addEventListener('change', render);
+document.getElementById('f-category').addEventListener('change', render);
 setMode('sample');
 
 // ── MODE SWITCH ────────────────────────────────────────────────────
@@ -264,7 +273,7 @@ async function setMode(m){
   showLoading();
   try{
     if(m==='sample'){
-      allData = await loadCSV(SAMPLE_CSV);
+      allData = await loadValidatedCSV(SAMPLE_CSV);
     } else {
       allData = await loadRealCSVs();
     }
@@ -276,44 +285,109 @@ async function setMode(m){
 }
 
 // ── CSV LOADERS ───────────────────────────────────────────────────
-function loadCSV(url){
+
+/** Load one CSV, return parsed rows (PapaParse). Rejects on network/parse error. */
+function fetchCSV(url){
   return new Promise((res,rej)=>{
-    const ctrl = new AbortController();
-    const tid  = setTimeout(()=>ctrl.abort(), 15000);
+    const tid = setTimeout(()=>rej(new Error('timeout')), 15000);
     Papa.parse(url,{
       download:true, header:true, dynamicTyping:true, skipEmptyLines:true,
-      complete: r => { clearTimeout(tid); res(r.data); },
+      complete: r => { clearTimeout(tid); res(r); },
       error:    e => { clearTimeout(tid); rej(e); }
     });
   });
 }
 
+/** Load + validate header. Returns rows or throws if header doesn't match. */
+async function loadValidatedCSV(url){
+  const result = await fetchCSV(url);
+  const fields = (result.meta && result.meta.fields) ? result.meta.fields.join(',') : '';
+  if(fields !== REQUIRED_HEADER){
+    throw new Error(`Header mismatch in ${url}: got "${fields}"`);
+  }
+  return result.data;
+}
+
+/**
+ * Try to load a CSV silently: returns [] if file missing, header wrong, or any error.
+ * Never throws.
+ */
+async function tryLoadCSV(url){
+  try {
+    const result = await fetchCSV(url);
+    const fields = (result.meta && result.meta.fields) ? result.meta.fields.join(',') : '';
+    if(fields !== REQUIRED_HEADER) return [];   // wrong header — skip silently
+    return result.data || [];
+  } catch(_){ return []; }
+}
+
+/**
+ * Discover CSVs in a directory by fetching its index page and parsing <a href> links.
+ * Falls back gracefully to empty list if the server doesn't expose listings.
+ */
+async function listDirCSVs(dirUrl){
+  try{
+    const ctrl = new AbortController();
+    const tid  = setTimeout(()=>ctrl.abort(), 5000);
+    const resp = await fetch(dirUrl, {signal: ctrl.signal});
+    clearTimeout(tid);
+    if(!resp.ok) return [];
+    const html = await resp.text();
+    // Parse all href="*.csv" references from the directory listing
+    const matches = [...html.matchAll(/href="([^"]+\.csv)"/gi)];
+    return matches
+      .map(m => m[1])
+      .filter(name => !name.startsWith('http') && !name.startsWith('/'))
+      .map(name => dirUrl + (name.includes('/') ? name : name));
+  } catch(_){ return []; }
+}
+
 async function loadRealCSVs(){
-  // Scan for CSVs in known result paths relative to index.html
-  const candidates = [];
-  for(const dir of REAL_GLOB){
-    // Try numeric filenames; we don't have directory listing in static mode
-    // so we fall back to known filenames or the sample
-    for(const name of ['results.csv','output.csv','eval.csv','pilot.csv','full.csv']){
-      candidates.push(dir+name);
+  const allUrls = new Set();
+
+  // 1. Try directory listing for each mac folder
+  const listings = await Promise.all(REAL_DIRS.map(d => listDirCSVs(d)));
+  listings.forEach(urls => urls.forEach(u => allUrls.add(u)));
+
+  // 2. Also probe pattern-based names as fallback
+  //    Real files are named <model>_<condition>.csv per AGENTS.md
+  const models = [
+    'Qwen2.5-3B-Instruct', 'qwen2.5-3b-instruct',
+    'Llama-3.2-3B-Instruct', 'llama-3.2-3b-instruct',
+    'gemma-2-2b-it',
+    'Llama-Guard-3-1B', 'llama-guard-3-1b',
+  ];
+  const conditions = ['none','baseline','steer_always','steer_gated'];
+  for(const dir of REAL_DIRS){
+    for(const mdl of models){
+      for(const cond of conditions){
+        allUrls.add(`${dir}${mdl}_${cond}.csv`);
+      }
     }
   }
-  const results = await Promise.allSettled(
-    candidates.map(url => loadCSV(url).catch(()=>null))
-  );
-  const rows = results
-    .filter(r=>r.status==='fulfilled' && r.value && r.value.length)
-    .flatMap(r=>r.value);
-  if(!rows.length) throw new Error('No real CSV files found in results/mac1–mac4/. Switch to Pilot (sample).');
+
+  // 3. Load all candidates, validate header, skip mismatches
+  const batches = await Promise.all([...allUrls].map(url => tryLoadCSV(url)));
+  const rows = batches.flat();
+
+  if(!rows.length){
+    throw new Error(
+      'No matching CSVs found in results/mac1–mac4/. ' +
+      'Expected files named <model>_<condition>.csv with header: ' + REQUIRED_HEADER +
+      '. Switch to "Pilot (sample)" to use sample data.'
+    );
+  }
   return rows;
 }
 
 // ── FILTERS ───────────────────────────────────────────────────────
 function populateFilters(){
-  const models   = [...new Set(allData.map(r=>r.model))].sort();
-  const variants = [...new Set(allData.map(r=>r.variant))].sort();
-  fillSelect('f-model',   models,   'All models');
-  fillSelect('f-variant', variants, 'All variants');
+  const models    = [...new Set(allData.map(r=>r.model))].sort();
+  const variants  = [...new Set(allData.map(r=>r.variant))].sort();
+  const categories= [...new Set(allData.map(r=>r.category))].sort();
+  fillSelect('f-model',    models,     'All models');
+  fillSelect('f-variant',  variants,   'All variants');
+  fillSelect('f-category', categories, 'All categories');
 }
 function fillSelect(id, vals, allLabel){
   const sel = document.getElementById(id);
@@ -324,14 +398,16 @@ function fillSelect(id, vals, allLabel){
 }
 function getFilters(){
   return {
-    model:   document.getElementById('f-model').value,
-    variant: document.getElementById('f-variant').value,
+    model:    document.getElementById('f-model').value,
+    variant:  document.getElementById('f-variant').value,
+    category: document.getElementById('f-category').value,
   };
 }
-function applyFilters(data, {model,variant}){
+function applyFilters(data, {model,variant,category}){
   return data.filter(r=>
-    (model==='all'   || r.model===model) &&
-    (variant==='all' || r.variant===variant)
+    (model==='all'    || r.model===model) &&
+    (variant==='all'  || r.variant===variant) &&
+    (category==='all' || r.category===category)
   );
 }
 
