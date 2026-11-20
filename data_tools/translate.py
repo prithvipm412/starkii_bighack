@@ -28,7 +28,10 @@ def translate_texts(texts, language="Kannada", model_name=MODEL, device=None, ba
         prepared = processor.preprocess_batch(batch, src_lang="eng_Latn", tgt_lang=TARGET_CODES[code])
         encoded = tokenizer(prepared, return_tensors="pt", padding="longest", truncation=True, max_length=256).to(device)
         with torch.inference_mode():
-            generated = model.generate(**encoded, max_length=256, num_beams=5)
+            # The IndicTrans2 remote model implementation can return an empty
+            # key/value cache with newer Transformers releases during beam search.
+            # Disabling cache keeps inference compatible at the cost of speed.
+            generated = model.generate(**encoded, max_length=256, num_beams=5, use_cache=False)
         decoded = tokenizer.batch_decode(generated, skip_special_tokens=True)
         results.extend(processor.postprocess_batch(decoded, lang=TARGET_CODES[code]))
     return results
