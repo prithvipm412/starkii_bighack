@@ -2553,12 +2553,12 @@ async function handleGuardCheck(e) {
   btnText.textContent = 'Checking…';
   btnSpinner.style.display = 'inline-block';
   resContainer.style.display = 'block';
-  resContainer.innerHTML = '<div class="state" style="min-height:90px;"><div class="spinner"></div><span>Querying guard server…</span></div>';
+  resContainer.innerHTML = '<div class="state" style="min-height:90px;"><div class="spinner"></div><span>Checking… (running translation &amp; Llama Guard inference)</span></div>';
+
+  const ctrl = new AbortController();
+  const tid = setTimeout(() => ctrl.abort(), 60000); // 60s timeout
 
   try {
-    const ctrl = new AbortController();
-    const tid = setTimeout(() => ctrl.abort(), 12000);
-
     const resp = await fetch('http://127.0.0.1:8787/check', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -2568,13 +2568,22 @@ async function handleGuardCheck(e) {
     clearTimeout(tid);
 
     if (!resp.ok) {
-      throw new Error(`HTTP ${resp.status}`);
+      const errText = await resp.text().catch(() => '');
+      throw new Error(`HTTP ${resp.status}: ${errText || resp.statusText}`);
     }
 
     const data = await resp.json();
     renderGuardResult(data);
   } catch (err) {
-    renderGuardOffline();
+    clearTimeout(tid);
+    if (err.name === 'AbortError') {
+      renderGuardTimeout();
+    } else if (err.message && err.message.startsWith('HTTP')) {
+      renderGuardError(err.message);
+    } else {
+      // Connection refused or network unreachable
+      renderGuardOffline();
+    }
   } finally {
     btn.disabled = false;
     btnText.textContent = 'Check';
@@ -2588,12 +2597,32 @@ function applyGuardExample(text) {
   handleGuardCheck();
 }
 
+function renderGuardTimeout() {
+  const container = document.getElementById('guard-result-container');
+  container.innerHTML = `
+    <div class="guard-offline-box" style="border-left-color:var(--burgundy);">
+      <div class="guard-offline-title">Request timed out after 60s.</div>
+      <div class="guard-offline-sub">The guard server on :8787 took longer than 60 seconds to respond. The model may still be cold-starting or busy. Try again.</div>
+    </div>
+  `;
+}
+
+function renderGuardError(msg) {
+  const container = document.getElementById('guard-result-container');
+  container.innerHTML = `
+    <div class="guard-offline-box" style="border-left-color:var(--burgundy);">
+      <div class="guard-offline-title">Guard server error</div>
+      <div class="guard-offline-sub">${msg}</div>
+    </div>
+  `;
+}
+
 function renderGuardOffline() {
   const container = document.getElementById('guard-result-container');
   container.innerHTML = `
     <div class="guard-offline-box">
       <div class="guard-offline-title">Guard server offline. Start it with: <code>python -m guard.server --preload</code></div>
-      <div class="guard-offline-sub">Ensure the local API is running on port 8787 to test live inputs against Llama Guard 3 1B and NLLB-200.</div>
+      <div class="guard-offline-sub">Connection to 127.0.0.1:8787 was refused. Start the local server in your terminal to enable interactive checks.</div>
     </div>
   `;
 }
@@ -2607,12 +2636,12 @@ function renderGuardResult(data) {
   const layer = data.layer || '—';
   const detected = data.detected || '—';
   const detectedMap = {
-    'en': 'English (en)',
-    'kn': 'Kannada script (kn)',
-    'kn_latn': 'Kanglish (kn_latn)',
-    'kn_mix': 'Code-mixed (kn_mix)'
+    'en': 'English',
+    'kn': 'Kannada script',
+    'kn_latn': 'Kanglish (Latin)',
+    'kn_mix': 'Code-mixed'
   };
-  const detectedLabel = detectedMap[detected] || detected;
+  const detectedLabel = detectedMap[detected] ? `${detectedMap[detected]} (<code>${detected}</code>)` : `<code>${detected}</code>`;
 
   const pUnsafe = typeof data.p_unsafe === 'number' ? data.p_unsafe : 0;
   const pPct = (pUnsafe * 100).toFixed(1);
@@ -2632,16 +2661,16 @@ function renderGuardResult(data) {
       </div>
       <div class="guard-result-grid">
         <div class="guard-metric-item">
+          <div class="guard-metric-label">Detected Language</div>
+          <div class="guard-metric-val">${detectedLabel}</div>
+        </div>
+        <div class="guard-metric-item">
           <div class="guard-metric-label">Deciding Layer</div>
           <div class="guard-metric-val"><code>${layer}</code></div>
         </div>
-        <div class="guard-metric-item">
-          <div class="guard-metric-label">Detected Style</div>
-          <div class="guard-metric-val">${detectedLabel}</div>
-        </div>
         <div class="guard-metric-item guard-metric-full">
           <div class="guard-metric-label">
-            <span>Risk Score (<code>p_unsafe</code>)</span>
+            <span>Risk Score (<code>p_unsafe</code> = <strong>${pUnsafe.toFixed(4)}</strong>)</span>
             <span class="guard-risk-pct">${pPct}%</span>
           </div>
           <div class="guard-risk-track">
