@@ -13,7 +13,9 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: building the Kannada pilot/full with data_tools.build.
+Doing: data_tools.build running for pilot, then full (HF backend, logged in as vvijetha).
+
 Blocked:
-- No HF login on mac4. ai4bharat/indictrans2-en-indic-1B, indictrans2-indic-en-1B and meta-llama/Llama-Guard-3-1B are all gated. Needs the licenses accepted and hf auth login.
+- ai4bharat/indictrans2-indic-en-1B is still gated for vvijetha (access requested). The baseline needs it for kn/kn_mix; en-indic and Llama-Guard-3-1B are OK.
+
 Next: build pilot.jsonl/full.jsonl -> check 20 translations -> prompts.zip + shasum -> pilot baseline.
