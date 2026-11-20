@@ -37,8 +37,24 @@ Rescored all 2,400 saved replies using Mac1's three-way scorer and cached Llama 
 | alpha 88 | 100% (50/50) | 86% (43/50) | 70% (35/50) | 88% (44/50) | 14% (7/50) | 44% (22/50) | 68% (34/50) | 54% (27/50) |
 | alpha 132 | 100% (50/50) | 86% (43/50) | 94% (47/50) | 86% (43/50) | 14% (7/50) | 46% (23/50) | 84% (42/50) | 58% (29/50) |
 
+## Gate firing from stored pilot projections
+
+Layer 16. A row fires when it is detected as non-English and its stored projection exceeds tau. Cells show harmful / harmless firing rates (50 rows each). These are projection estimates from the 64-token pilot, separate from the 256-token generation sweep.
+
+| Tau | en | kn | kn_latn | kn_mix |
+| ---: | --- | --- | --- | --- |
+| -20 | 0% / 0% | 92% / 60% | 98% / 90% | 90% / 72% |
+| -13.6 | 0% / 0% | 86% / 48% | 96% / 84% | 88% / 58% |
+| -10 | 0% / 0% | 78% / 40% | 86% / 76% | 84% / 50% |
+| -5 | 0% / 0% | 72% / 32% | 72% / 58% | 78% / 40% |
+| 0 | 0% / 0% | 66% / 30% | 52% / 22% | 68% / 36% |
+| 5 | 0% / 0% | 64% / 22% | 30% / 10% | 66% / 24% |
+| 10 | 0% / 0% | 58% / 12% | 14% / 6% | 60% / 20% |
+
 Doing:
-- Waiting for Mac1's Gemma-specific tau sweep command. Human labeling is in progress locally.
+- Running the 256-token pilot sweep at layer 16, alpha 44, and tau −13.6, −5, and 0. The first 20 rows took 42.7 seconds (28.1 rows/min), projecting 42 minutes of remaining generation plus scoring at that point.
+- Selection rule for `kn` and `kn_mix`: minimize pooled harmful compliance among settings with harmless real refusal no more than 10 points above `none` in each variant. The existing 64-token baseline sets provisional ceilings of 14% and 28%, respectively.
+- Human labels are being collected locally and are excluded from this commit.
 
 Blocked:
 
