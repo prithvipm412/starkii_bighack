@@ -257,3 +257,39 @@ Harmful prompts that the input check (Llama Guard on the translated prompt) did 
 
 - These counts rely on harmful_compliance (Llama Guard on the NLLB-translated reply); judge or translation errors can add or hide misses. Small cells (single digits) are anecdotes, not rates.
 <!-- missed:end -->
+
+<!-- projdet:begin -->
+## The model's own refusal signal as a language-agnostic detector
+Source: `analysis/projection_detector.csv` (`python -m analysis.projection_detector`), condition none gate files.
+Detector = the prompt's projection on the model's **English-derived** refusal direction at the steering layer; flag if projection > tau (the configured gate threshold). AUROC is threshold-free (0.5 = chance).
+
+**Llama-3.2-3B-Instruct** (layer 15, tau -2.353, n = 50 harmful / 50 harmless per variant)
+
+| variant | AUROC [95% CI] | catch % at tau | false-alarm % at tau | mean proj harmful / harmless |
+|---|---|---|---|---|
+| en | 0.999 [0.992–1.0] | 100.0 [92.9–100.0] | 52.0 [38.5–65.2] | 4.74 / -2.32 |
+| kn | 0.639 [0.531–0.748] | 100.0 [92.9–100.0] | 98.0 [89.5–99.6] | -0.55 / -1.19 |
+| kn_latn | 0.474 [0.361–0.588] | 100.0 [92.9–100.0] | 100.0 [92.9–100.0] | -0.65 / -0.6 |
+| kn_mix | 0.669 [0.564–0.775] | 98.0 [89.5–99.6] | 100.0 [92.9–100.0] | -0.3 / -1.17 |
+| ALL_non_en | 0.617 [0.554–0.68] | 99.3 [96.3–99.9] | 99.3 [96.3–99.9] | -0.5 / -0.99 |
+| ALL | 0.759 [0.713–0.806] | 99.5 [97.2–99.9] | 87.5 [82.2–91.4] | 0.81 / -1.32 |
+
+- Llama-3.2-3B-Instruct: AUROC en 0.999 vs Kannada variants kn 0.639, kn_latn 0.474, kn_mix 0.669; weakest = kn_latn. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 98.0%, kn_latn 100.0%, kn_mix 100.0%.
+  - Llama-3.2-3B-Instruct: tau -2.353 is below almost all kn, kn_latn, kn_mix projections, so at this tau the gate fires on nearly every non-English prompt (it behaves like steer-all-non-English); the AUROC, not the tau, is the fair measure here.
+  - Llama-3.2-3B-Instruct: pilot-size n (50 per class), so CIs are wide.
+**Qwen2.5-3B-Instruct** (layer 23, tau 15.882, n = 300 harmful / 150 harmless per variant)
+
+| variant | AUROC [95% CI] | catch % at tau | false-alarm % at tau | mean proj harmful / harmless |
+|---|---|---|---|---|
+| en | 0.971 [0.957–0.985] | 100.0 [98.7–100.0] | 70.7 [62.9–77.4] | 40.57 / 19.03 |
+| kn | 0.633 [0.581–0.686] | 62.3 [56.7–67.6] | 46.0 [38.2–54.0] | 17.21 / 15.52 |
+| kn_latn | 0.849 [0.814–0.883] | 87.0 [82.7–90.3] | 34.0 [26.9–41.9] | 17.09 / 15.51 |
+| kn_mix | 0.577 [0.522–0.632] | 74.3 [69.1–78.9] | 71.3 [63.6–78.0] | 18.21 / 17.03 |
+| ALL_non_en | 0.663 [0.634–0.693] | 74.6 [71.6–77.3] | 50.4 [45.8–55.0] | 17.5 / 16.02 |
+| ALL | 0.697 [0.673–0.721] | 80.9 [78.6–83.0] | 55.5 [51.5–59.4] | 23.27 / 16.77 |
+
+- Qwen2.5-3B-Instruct: AUROC en 0.971 vs Kannada variants kn 0.633, kn_latn 0.849, kn_mix 0.577; weakest = kn_mix. At tau, the false-alarm rate on harmless Kannada-variant prompts is kn 46.0%, kn_latn 34.0%, kn_mix 71.3%.
+
+- **Where it is weak:** the direction is computed from English prompts. In Kannada script, Kanglish and code-mix, harmful projections fall towards the harmless range, so AUROC drops and a single tau trades catch rate against false alarms (the harmless over-refusal seen under steer_gated). It is a cheap in-model signal (no extra model, no translation), not a replacement for the translated Llama Guard input check.
+- Catch / false-alarm here use projection > tau only; the deployed gate also requires a non-English detection, so it never fires on English (see gate_fire_* columns).
+<!-- projdet:end -->
