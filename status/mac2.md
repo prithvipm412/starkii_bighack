@@ -1,7 +1,7 @@
 # Mac2 status
 
 Done:
-- Phase 1 prompt variant tools added under `data_tools/` (English, native script, Latin transliteration, code-mixed).
+- Phase 1 prompt variant tools added under `data_tools/` and pushed; a mocked 20-prompt structural check passed (80 output rows, four variants per `prompt_id`). Ready for mac4 to use after dependencies and input JSONL are available.
 Doing:
  - Waiting for the pilot JSONL and a local model environment for the real 20-prompt run.
 Blocked:
