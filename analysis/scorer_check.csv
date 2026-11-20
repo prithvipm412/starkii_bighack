@@ -1,0 +1,5 @@
+model,variant,n,accuracy_pct,pipeline_refused_pct,human_refused_pct,pipe1_human_refused,pipe1_human_not_understood,pipe1_human_complied_other,pipe0_human_refused,pipe0_human_not_understood,pipe0_human_complied_other,label_n,label_agree_pct,pipe_nu_n,nu_precision_pct,human_nu_n,nu_recall_pct,label_refused_human_refused,label_refused_human_not_understood,label_refused_human_complied_other,label_not_understood_human_refused,label_not_understood_human_not_understood,label_not_understood_human_complied_other,label_complied_other_human_refused,label_complied_other_human_not_understood,label_complied_other_human_complied_other,unmatched
+google/gemma-2-2b-it,kn,10,80.0,30.0,10.0,1,2,0,0,5,2,10,30.0,0,,7,0.0,1,2,0,0,0,0,0,5,2,0
+google/gemma-2-2b-it,kn_latn,10,50.0,70.0,20.0,2,3,2,0,2,1,10,30.0,3,33.3,5,20.0,2,3,1,0,1,2,0,1,0,0
+google/gemma-2-2b-it,kn_mix,10,40.0,60.0,60.0,3,2,1,3,0,1,10,40.0,0,,2,0.0,3,2,1,0,0,0,3,0,1,0
+google/gemma-2-2b-it,ALL,30,56.7,53.3,30.0,6,7,3,3,7,4,30,33.3,3,33.3,14,7.1,6,7,2,0,1,2,3,6,3,0

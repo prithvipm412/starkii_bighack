@@ -11,6 +11,10 @@ Writes analysis/scorer_check.csv, one row per model x variant plus an ALL row pe
   confusion: pipe1_human_refused, pipe1_human_not_understood, pipe1_human_complied_other,
              pipe0_human_refused, pipe0_human_not_understood, pipe0_human_complied_other,
   unmatched labels (no pipeline row).
+If the pipeline rows have a `label` column, also 3-class agreement of `label` with humans:
+  label_n, label_agree_pct, label confusion label_<pipe>_human_<human>,
+  not_understood: pipe_nu_n, nu_precision_pct (humans agree when the pipeline says not_understood),
+                  human_nu_n, nu_recall_pct (pipeline catches human not_understood).
 Usage: python -m analysis.scorer_check [--root DIR]
 """
 import argparse
@@ -22,6 +26,7 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 STD = {"prompt_id", "split", "variant", "model", "condition", "refused"}
 VARIANTS = ["en", "kn", "kn_latn", "kn_mix"]
+CLS = ("refused", "not_understood", "complied_other")
 
 
 def read_csv(path: Path):
@@ -92,6 +97,15 @@ def main():
                 c["pipe_refused"] += pr
                 c["human_refused"] += int(hc == "refused")
                 c[f"pipe{pr}_human_{hc}"] += 1
+                pl = (p.get("label") or "").strip()
+                if pl:
+                    pl = pl if pl in ("refused", "not_understood") else "complied_other"
+                    c["label_n"] += 1
+                    c["label_agree"] += int(pl == hc)
+                    c[f"label_{pl}_human_{hc}"] += 1
+                    c["pipe_nu"] += int(pl == "not_understood")
+                    c["human_nu"] += int(hc == "not_understood")
+                    c["nu_both"] += int(pl == hc == "not_understood")
 
     if not cells:
         sys.exit("no hand labels found (results/mac*/handlabels.csv)")
@@ -100,11 +114,18 @@ def main():
     order = {v: i for i, v in enumerate(VARIANTS + ["ALL"])}
     for (model, variant), c in sorted(cells.items(), key=lambda kv: (kv[0][0], order.get(kv[0][1], 8))):
         n = c["n"]
+        ln = c["label_n"]
+        lab = {"label_n": ln, "label_agree_pct": round(100 * c["label_agree"] / ln, 1) if ln else None,
+               "pipe_nu_n": c["pipe_nu"],
+               "nu_precision_pct": round(100 * c["nu_both"] / c["pipe_nu"], 1) if c["pipe_nu"] else None,
+               "human_nu_n": c["human_nu"],
+               "nu_recall_pct": round(100 * c["nu_both"] / c["human_nu"], 1) if c["human_nu"] else None,
+               **{f"label_{a}_human_{b}": c[f"label_{a}_human_{b}"] for a in CLS for b in CLS}}
         out.append({"model": model, "variant": variant, "n": n,
                     "accuracy_pct": round(100 * c["correct"] / n, 1) if n else None,
                     "pipeline_refused_pct": round(100 * c["pipe_refused"] / n, 1) if n else None,
                     "human_refused_pct": round(100 * c["human_refused"] / n, 1) if n else None,
-                    **{k: c[k] for k in conf}, "unmatched": c["unmatched"]})
+                    **{k: c[k] for k in conf}, **lab, "unmatched": c["unmatched"]})
     Path(args.out).parent.mkdir(parents=True, exist_ok=True)
     with open(args.out, "w", newline="", encoding="utf-8") as f:
         w = csv.DictWriter(f, fieldnames=list(out[0]))
@@ -113,7 +134,8 @@ def main():
     print(f"{n_labels} labels -> {args.out}")
     for r in out:
         print(f"{r['model'][:28]:28s} {r['variant']:8s} n={r['n']:3d} acc={r['accuracy_pct']}%  "
-              f"pipe-refused but human not_understood={r['pipe1_human_not_understood']}  unmatched={r['unmatched']}")
+              f"label agree={r['label_agree_pct']}% (n={r['label_n']})  NU precision={r['nu_precision_pct']}% "
+              f"(pipe NU={r['pipe_nu_n']})  NU recall={r['nu_recall_pct']}% (human NU={r['human_nu_n']})")
 
 
 if __name__ == "__main__":

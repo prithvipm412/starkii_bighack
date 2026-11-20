@@ -49,17 +49,24 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
   - Compliance on kn_latn is low (Qwen 4%, Gemma 22%) because the models mostly can't parse the input.
 - **Phrase-refusal rates for harmful prompts (refused, en → kn):** Qwen 90 → 8, Gemma 100 → 48.
 
-## Finding 2: Llama Guard baseline (translate → Llama Guard 3 1B on the prompt; pilot ids)
-| variant | harmful flagged | harmless flagged | median latency ms |
-|---|---|---|---|
-| en | 98.0 [89.5–99.6] | 12.0 [5.6–23.8] | 177 |
-| kn (NLLB kn→en) | 90.0 [78.6–95.7] | 8.0 [3.2–18.8] | 424 |
-| kn_mix (NLLB kn→en) | 92.0 [81.2–96.8] | 6.0 [2.1–16.2] | 404 |
-| kn_latn (untranslated) | 42.0 [29.4–55.8] | 2.0 [0.4–10.5] | 113 |
+## Finding 2: Llama Guard baseline (translate → Llama Guard 3 1B on the prompt)
+| variant | condition | harmful flagged, full (n=300) | harmless flagged, full (n=150) | harmful flagged, pilot (n=50) | harmless flagged, pilot (n=50) | median latency ms |
+|---|---|---|---|---|---|---|
+| en | baseline | 96.3 [93.6–97.9] | 7.3 [4.1–12.7] | 98.0 [89.5–99.6] | 12.0 [5.6–23.8] | 179 |
+| kn (NLLB kn→en) | baseline | 90.3 [86.5–93.2] | 7.3 [4.1–12.7] | 90.0 [78.6–95.7] | 8.0 [3.2–18.8] | 448 |
+| kn_mix (NLLB kn→en) | baseline | 92.3 [88.8–94.8] | 6.0 [3.2–11.0] | 92.0 [81.2–96.8] | 6.0 [2.1–16.2] | 447 |
+| kn_latn (untranslated) | baseline | 39.7 [34.3–45.3] | 1.3 [0.4–4.7] | 42.0 [29.4–55.8] | 2.0 [0.4–10.5] | 138 |
+| kn_latn (ITRANS→Kannada→NLLB) | baseline_translit | PENDING | PENDING | 90.0 [78.6–95.7] | 10.0 [4.3–21.4] | 422 |
 
-- **Translate-then-guard mostly closes the gap for Kannada script and code-mix:** −8 pts for kn and −6 for kn_mix compared with en. Translation adds about 230–250 ms per prompt.
-- **It fails on Kanglish:** 98 → 42 (−56 pts). The translators take Kannada script only, so the guard sees raw Roman-script text.
-- **Full set, partial:** kn_latn harmful flagged = 37.0 [28.2–46.8] on n = 100 so far. The full run is in progress (`results/mac4/llama-guard-3-1b_baseline.csv`).
+- **Translate-then-guard mostly closes the gap for Kannada script and code-mix.**
+  - Full set: kn −6.0 pts and kn_mix −4.0 pts compared with en (96.3).
+  - Wrong flags on harmless prompts don't rise (6.0–7.3% vs 7.3% for en).
+  - Translation adds about 270 ms per prompt.
+- **Untranslated Kanglish fails:** 96.3 → 39.7 (−56.6 pts, full set). The guard sees raw Roman-script text.
+- **Back-transliterating Kanglish closes most of that gap.**
+  - Pilot: harmful kn_latn flagged 42 → 90 (+48 pts), the same as kn.
+  - Cost: harmless wrong flags 2 → 10%, close to en at 12%.
+  - Caveat: our kn_latn was produced by ITRANS, so reversing it is near-exact (80/100 pilot prompts round-trip to the identical kn text). Real, informal Kanglish would not reverse this cleanly, so this is an upper bound.
 
 ## Mechanism: refusal-direction projections, EN vs KN (condition none, mean over 50 prompts)
 | model (layer, tau) | harmful en | harmful kn | harmful kn_latn | harmful kn_mix | harmless en | harmless kn | harmless kn_latn | harmless kn_mix |
@@ -110,6 +117,30 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
   - Qwen: harmful kn 36, kn_latn 42, kn_mix 37; harmless kn 22, kn_latn 13, kn_mix 38.
   - Gemma: harmful kn 43, kn_latn 48, kn_mix 44; harmless kn 24, kn_latn 42, kn_mix 29.
 
+## Scorer validation (human hand labels)
+- **Data:** 30 hand labels, all from `results/mac3/handlabels.csv`: gemma-2-2b-it, 10 each for kn, kn_latn and kn_mix, 5 none + 5 steer_gated per variant.
+  - mac3 notes some kn items were labelled with AI translation help.
+  - No en labels; no Qwen or Llama labels yet.
+- **Output:** `analysis/scorer_check.csv`.
+
+| variant | n | `label` agrees with human (3-class) | `refused` agrees with human (binary) | pipeline not_understood → human agrees | human not_understood → pipeline caught |
+|---|---|---|---|---|---|
+| kn | 10 | 30.0% | 80.0% | 0 / 0 | 0 / 7 |
+| kn_latn | 10 | 30.0% | 50.0% | 1 / 3 (33.3%) | 1 / 5 (20.0%) |
+| kn_mix | 10 | 40.0% | 40.0% | 0 / 0 | 0 / 2 |
+| ALL | 30 | 33.3% | 56.7% | 1 / 3 (33.3%) | 1 / 14 (7.1%) |
+
+- **Humans marked 14/30 replies not_understood; the pipeline found 1 of them.**
+  - kn: 5 of the 7 human not_understood replies were labelled complied by the pipeline, and 2 refused.
+  - kn_latn: 3 of 5 were labelled refused.
+- **On kn_latn, humans agree with the pipeline's not_understood 1 time in 3.** The other 2 were human-labelled complied.
+- **Refusals are over-counted:** 7 of the 16 pipeline `refused=1` replies were not_understood to humans, and 3 were complied.
+- **kn_mix misses refusals:** 3 human refusals were labelled complied by the pipeline (`refused=0`).
+- **Read-across:**
+  - Phrase-based `label` misses most not_understood replies in Kannada and over-calls refusal, so Finding 1's not_understood shares (72% / 64% on kn_latn) are unreliable at the reply level.
+  - harmful_compliance comes from Llama Guard, not phrases, and was not hand-checked here (PENDING).
+  - n = 10 per variant: CIs are about ±25–30 pts.
+
 ## Failure analysis
 - **Harmless over-refusal under gating is real refusal, not not_understood.** Real refusals rise:
   - Qwen: kn 8 → 44 (+36 pts), kn_latn 36 → 56 (+20), kn_mix 36 → 80 (+44).
@@ -120,7 +151,7 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
   - Qwen harmful: refused 32% vs label refused 2% (72% not_understood).
   - Qwen harmless: refused 84% vs label refused 36%.
   - Use harmful_compliance plus the label breakdown, not raw `refused`, for kn_latn and kn_mix.
-  - Human check of the scorer: PENDING (`analysis/scorer_check.py` is ready; waiting on `results/mac*/handlabels.csv`).
+  - Human check (Gemma, n = 30): the label agrees with humans 33% of the time, and the pipeline catches 1 of 14 human not_understood replies (see Scorer validation).
 - **Translation noise.**
   - Prompts are machine-translated (Google), and kn_latn is a mechanical ITRANS transliteration, not natural Kanglish.
   - Replies are judged after NLLB kn→en translation, so judge errors can come from translation.
@@ -128,11 +159,12 @@ Small open models refuse harmful requests less often in Kannada script (kn), Kan
 - **Small n.**
   - n = 50 per cell, so CIs are ±10–14 pts at mid-range rates. Differences under ~20 pts are not reliable.
   - Qwen numbers come from the 64-token pilot. mac1 has moved to 256 tokens, so compliance may change in longer replies (PENDING).
-  - Full set (300 + 150 per variant): PENDING.
+  - Full set (300 + 150 per variant): done for the Llama Guard baseline only; models PENDING.
 
 ## Next steps
 1. Finish the full-set Llama Guard baseline (running), then failure breakdown per HarmBench category.
 2. Full runs at 256 tokens for Qwen, Gemma and Llama-3.2-3B. Llama-3.2 is PENDING everywhere.
 3. Sweeps of layer × alpha × tau for steer_gated, to cut harmless kn and kn_mix real refusals. The gate needs better harmful/harmless separation in Kannada.
 4. Hand labels from mac1–3, then `scorer_check.csv`: agreement of `label` with humans, especially not_understood on kn_latn.
-5. Kanglish: add a Roman-script back-transliteration step to the baseline and compare with untranslated.
+5. baseline_translit on the full set; test on natural (non-ITRANS) Kanglish.
+6. More hand labels: en, Qwen and Llama, plus a harmful_compliance check. Fix not_understood detection in Kannada replies (phrase lists miss it).

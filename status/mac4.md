@@ -1,6 +1,10 @@
 # Mac4 status
 
 Done:
+- Full Llama Guard baseline: 1800/1800 rows. Harmful flagged: en 96.3, kn 90.3, kn_mix 92.3, kn_latn (untranslated) 39.7 (n=300). Harmless flagged 1.3-7.3 (n=150).
+- baseline_translit (kn_latn -> ITRANS->Kannada -> NLLB -> Guard), pilot: harmful kn_latn 42 -> 90%, harmless 2 -> 10%. results/mac4/llama-guard-3-1b_baseline_translit.csv.
+- scorer_check.csv on mac3's 30 Gemma hand labels: label agrees with humans 33.3% (kn 30, kn_latn 30, kn_mix 40); binary refused 56.7%. Pipeline catches 1/14 human not_understood; on kn_latn humans agree with the pipeline's not_understood 1/3. Scorer validation section added to FINDINGS.
+- GOTCHA: `git pull --autostash` while a run is appending to a tracked CSV swaps the file and silently loses rows. Fixed by writing long runs to logs/*_work.csv and copying when done. An "auto-push" job (not mine) also does this on mac4.
 - FINDINGS.md updated with rescored Qwen (pilot64) and Gemma (mac3 rescore 3170860). The gap holds on harmful_compliance: Qwen en 2% -> kn 76%, kn_mix 52%; Gemma 0 -> 44 / 16. kn_latn is mostly not_understood (Qwen 72%, Gemma 64%). steer_gated over-refusal on harmless is REAL refusal (label refused +20..+80 pts), not not_understood. Llama-3.2 PENDING.
 - Baseline translator = NLLB-200-distilled-600M kn->en (local, offline; same settings as pipeline/score.py). Pilot baseline complete (400 rows): harmful flagged en 49/50, kn 45/50, kn_mix 46/50, kn_latn (untranslated) 21/50; harmless flagged en 6, kn 4, kn_mix 3, kn_latn 1 /50. Median latency: en 177 ms, kn 424, kn_mix 404, kn_latn 113.
 - summarize.py v2: adds run (main | pilot64 ...), scope (all | pilot ids only), harmful_compliance %, and label breakdown (refused / not_understood / complied %) per split.
@@ -26,10 +30,9 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: full Llama Guard baseline in the background (633/1800 rows at last push), resumable, auto-push every 30 min.
+Doing: -
 
 Blocked:
-- scorer_check waits on results/mac*/handlabels.csv (format above).
-- 20-prompt translation check not done yet (needs a human).
+- 20-prompt translation check needs a human.
 
-Next: full baseline done -> summarize -> per-category failure analysis (analysis/failure.py) -> FINDINGS full-set numbers; scorer_check once handlabels land; Llama-3.2 numbers when mac2 pushes.
+Next: baseline_translit on the full set; per-category failure analysis (analysis/failure.py); Llama-3.2 numbers when mac2 pushes; more hand labels (en, Qwen, Llama).
