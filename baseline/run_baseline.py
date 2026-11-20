@@ -1,14 +1,15 @@
-"""Baseline defence: translate non-English input to English (Google Translate kn->en), then Llama Guard 3 1B.
+"""Baseline defence: translate non-English input to English (NLLB-200-distilled-600M kn->en, local), then Llama Guard 3 1B.
 
 refused = 1 if Llama Guard labels the (translated) user prompt "unsafe".
 judge_score = P(unsafe) vs P(safe) at Llama Guard's verdict token.
-latency_ms = translation (Google API round trip, network-dependent) + guard time, per prompt (batch size 1).
+latency_ms = translation + guard time, per prompt (batch size 1).
 
 Preprocessing per variant:
   en      -> guard directly
-  kn      -> Google kn -> en -> guard
-  kn_mix  -> Google kn -> en -> guard (English technical terms pass through)
-  kn_latn -> guard UNTRANSLATED (Roman-script Kanglish; kept as decided before the switch to Google)
+  kn      -> NLLB kan_Knda -> eng_Latn -> guard
+  kn_mix  -> NLLB kan_Knda -> eng_Latn -> guard (English technical terms pass through)
+  kn_latn -> guard UNTRANSLATED (Roman-script Kanglish; decided earlier, kept for consistency)
+Run with HF_HUB_OFFLINE=1 once models are cached.
 
 Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md results format), appending after
 every prompt and resuming on restart. Translations and prompt text are never written to disk.
@@ -25,6 +26,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 GUARD = "meta-llama/Llama-Guard-3-1B"
+NLLB = "facebook/nllb-200-distilled-600M"
 MODEL_NAME = "llama-guard-3-1b"
 CONDITION = "baseline"
 FIELDS = ["prompt_id", "split", "category", "variant", "model", "condition",
@@ -67,29 +69,24 @@ def done_keys(out: Path) -> set:
 
 
 class Translator:
-    """Google Translate kn -> en (the study's translator; IndicTrans2 was not downloadable in time)."""
-    URL = "https://translate.googleapis.com/translate_a/single"
+    """NLLB-200-distilled-600M kan_Knda -> eng_Latn, local. Same model and settings as pipeline/score.py
+    (greedy, max_length 256, fp32), so baseline and pipeline scorer share one translator."""
 
-    def __init__(self, device=None):
-        import requests
-        self.requests = requests
+    def __init__(self, device):
+        import torch
+        from transformers import AutoModelForSeq2SeqLM, AutoTokenizer
+        self.torch, self.device = torch, device
+        self.tok = AutoTokenizer.from_pretrained(NLLB)
+        self.tok.src_lang = "kan_Knda"
+        self.model = AutoModelForSeq2SeqLM.from_pretrained(NLLB, dtype=torch.float32).to(device).eval()
+        self.eng = self.tok.convert_tokens_to_ids("eng_Latn")
 
-    def __call__(self, text: str, retries: int = 8) -> str:
-        time.sleep(0.3)  # stay under Google's rate limit
-        for attempt in range(retries):
-            try:
-                r = self.requests.get(self.URL, params={"client": "gtx", "sl": "kn", "tl": "en", "dt": "t",
-                                                        "q": text}, timeout=20)
-                r.raise_for_status()
-                out = "".join(seg[0] for seg in r.json()[0] if seg and seg[0])
-                if out.strip():
-                    return out
-                raise RuntimeError("empty translation")
-            except Exception as e:
-                if attempt == retries - 1:
-                    raise RuntimeError(f"google kn->en failed: {type(e).__name__}") from e
-                time.sleep(min(60, 5 * 2 ** attempt))  # 5,10,20,40,60.. s backoff (HTTP 429)
-        raise AssertionError("unreachable")
+    def __call__(self, text: str) -> str:
+        enc = self.tok([text], truncation=True, max_length=256, return_tensors="pt").to(self.device)
+        with self.torch.inference_mode():
+            gen = self.model.generate(**enc, forced_bos_token_id=self.eng, min_length=0, max_length=256,
+                                      num_beams=1, do_sample=False, use_cache=True)
+        return self.tok.batch_decode(gen.cpu(), skip_special_tokens=True)[0].strip()
 
 
 class Guard:
