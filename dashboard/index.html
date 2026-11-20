@@ -3,11 +3,8 @@
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-<title>Bhasha Kavach — Results Dashboard</title>
-<!-- Google Fonts with system fallbacks so it still works offline -->
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<title>The Language Barrier</title>
+<!-- Offline-ready: System font stacks only (no font CDN) -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 <style>
@@ -15,88 +12,129 @@
 *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
 :root{
   --bg: #F5F1E6;              /* cream page */
-  --surface: #FBF8F1;         /* cards */
+  --surface: #FBF8F1;         /* cards & nav */
   --border: #E2DCCB;
   --ink: #2B2A24;             /* main text */
   --muted: #6B6658;           /* secondary text */
   --grid: #E7E1D2;            /* chart gridlines */
-  --olive: #5B6B3A;           /* primary */
+  --olive: #5B6B3A;           /* primary / buttons / active pills */
   --olive-soft: #A3AD7F;
-  --burgundy: #7A1F2B;        /* accent, gaps, warnings */
+  --burgundy: #7A1F2B;        /* accent, gaps, warnings, numbers */
   --burgundy-soft: #B5727A;
   --ochre: #B8955A;
   --taupe: #8C8578;
-  --transition: 0.15s ease;
+  --transition: 0.25s ease;
   --radius: 8px;
 }
-html{font-size:16px;scroll-behavior:smooth}
+html{
+  font-size: 16px;
+  scroll-behavior: smooth;
+  scroll-padding-top: 75px;
+}
 body{
   background: var(--bg);
   color: var(--ink);
-  font-family: 'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   font-weight: 400;
   font-size: 15px;
   line-height: 1.6;
   min-height: 100vh;
 }
 h1,h2,h3{
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: Georgia, "Times New Roman", Times, serif;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
 }
+code, pre{
+  font-family: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+  font-size: 0.9em;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.15em 0.35em;
+  border-radius: 4px;
+}
 
-/* Tabular numerals for cards, rates, and tables */
-.gap-val, .cell-rate, table td, .cnt, .model-pill, .upd, #status-pills {
+/* Tabular numerals for cards, rates, tables, and counters */
+.hero-stat-val, .gap-val, .cell-rate, table td, .cnt, .model-pill, .upd, #status-pills{
   font-variant-numeric: tabular-nums;
 }
 
-/* ── Header ─────────────────────────────────────────────── */
-#header{
+/* ── Sticky Top Nav ───────────────────────────────────────── */
+#top-nav{
+  position: sticky;
+  top: 0;
+  z-index: 200;
   background: var(--surface);
   border-bottom: 1px solid var(--border);
-  padding: 1.75rem 2.5rem;
+  box-shadow: 0 2px 8px rgba(43, 42, 36, 0.04), 0 1px 2px rgba(43, 42, 36, 0.02);
+}
+.nav-inner{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.85rem 1.5rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 1.5rem;
   flex-wrap: wrap;
-  gap: 1.2rem;
-  position: sticky;
-  top: 0;
-  z-index: 100;
 }
-#header .brand{
+.nav-brand{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--ink);
+  text-decoration: none;
+  letter-spacing: -0.01em;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: color var(--transition);
+}
+.nav-brand:hover{
+  color: var(--olive);
+}
+.nav-links{
   display: flex;
   align-items: center;
-  gap: 1.1rem;
+  gap: 1.5rem;
 }
-#header .brand svg{
-  flex-shrink: 0;
-}
-#header h1{
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 44px;
-  font-weight: 700;
-  letter-spacing: -0.01em;
-  color: var(--ink);
-  line-height: 1.1;
-  display: flex;
-  align-items: baseline;
-  gap: 0.75rem;
-  flex-wrap: wrap;
-}
-#header .hypothesis{
-  font-size: 15px;
+.nav-link{
+  font-size: 0.88rem;
+  font-weight: 500;
   color: var(--muted);
-  margin-top: 0.35rem;
-  max-width: 62ch;
-  line-height: 1.6;
+  text-decoration: none;
+  padding: 0.25rem 0.1rem;
+  position: relative;
+  transition: color var(--transition);
+}
+.nav-link:hover{
+  color: var(--ink);
+}
+.nav-link.active{
+  color: var(--olive);
+  font-weight: 600;
+}
+.nav-link.active::after{
+  content: '';
+  position: absolute;
+  bottom: -4px;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  background: var(--olive);
+  border-radius: 1px;
+}
+.nav-tools{
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
 /* SAMPLE DATA badge: --burgundy outline, cream fill */
 .sample-badge{
   display: none;
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   font-variant: all-small-caps;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -111,18 +149,7 @@ h1,h2,h3{
 }
 .sample-badge.show{display: inline-block}
 
-/* Toggle buttons: active = --olive fill with cream text; inactive = transparent with --ink text */
-#toggle-wrap{
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  flex-shrink: 0;
-}
-#toggle-wrap label{
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-weight: 600;
-}
+/* Segmented Toggle Buttons: active = --olive fill with cream text; inactive = transparent with --ink text */
 .toggle-btn{
   display: inline-flex;
   border: 1px solid var(--border);
@@ -131,8 +158,8 @@ h1,h2,h3{
   background: var(--surface);
 }
 .toggle-btn button{
-  padding: 0.4rem 0.95rem;
-  font-family: 'Inter', -apple-system, sans-serif;
+  padding: 0.4rem 0.85rem;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   font-size: 0.8rem;
   font-weight: 500;
   background: transparent;
@@ -147,11 +174,275 @@ h1,h2,h3{
   font-weight: 600;
 }
 
-/* ── Status bar ─────────────────────────────────────────── */
+/* ── Section Containers ───────────────────────────────────── */
+.section-wrap{
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2.5rem 1.5rem;
+  width: 100%;
+}
+.section-header{
+  margin-bottom: 1.75rem;
+}
+.section-title{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--ink);
+  line-height: 1.2;
+}
+.section-desc{
+  font-size: 15px;
+  color: var(--muted);
+  margin-top: 0.35rem;
+  max-width: 80ch;
+}
+
+/* ── Hero / Homepage Section (#overview) ─────────────────── */
+#overview{
+  position: relative;
+  min-height: calc(100vh - 65px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+  padding: 3.5rem 1.5rem 4rem;
+  background: var(--bg);
+}
+#hero-canvas{
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 1;
+}
+.hero-content{
+  position: relative;
+  z-index: 2;
+  max-width: 980px;
+  margin: 0 auto;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1.35rem;
+}
+.hero-tag{
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-variant: all-small-caps;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.74rem;
+  font-weight: 600;
+  padding: 0.2rem 0.65rem;
+  border-radius: 4px;
+  border: 1px solid var(--olive);
+  background: transparent;
+  color: var(--olive);
+}
+.hero-title{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 46px;
+  font-weight: 700;
+  color: var(--ink);
+  letter-spacing: -0.02em;
+  line-height: 1.15;
+}
+.hero-tagline{
+  font-size: 1.22rem;
+  font-weight: 500;
+  color: var(--ink);
+  max-width: 760px;
+  line-height: 1.45;
+}
+.hero-question{
+  font-size: 1rem;
+  font-style: italic;
+  color: var(--muted);
+  max-width: 680px;
+  line-height: 1.5;
+}
+
+/* Live Stats Grid */
+.hero-stats-grid{
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.25rem;
+  width: 100%;
+  margin-top: 0.4rem;
+}
+.hero-stat-card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.3rem 1.15rem;
+  box-shadow: 0 2px 8px rgba(43, 42, 36, 0.04), 0 1px 2px rgba(43, 42, 36, 0.02);
+  transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+  text-align: left;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+.hero-stat-card:hover{
+  border-color: var(--olive-soft);
+  box-shadow: 0 4px 12px rgba(43, 42, 36, 0.06);
+  transform: translateY(-2px);
+}
+.hero-stat-label{
+  font-size: 0.74rem;
+  font-variant: all-small-caps;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+.hero-stat-val{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--burgundy);
+  line-height: 1.15;
+  font-variant-numeric: tabular-nums;
+}
+.hero-stat-sub{
+  font-size: 0.8rem;
+  color: var(--muted);
+  line-height: 1.4;
+}
+
+/* How It Works Strip */
+.how-strip{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.85rem;
+  flex-wrap: wrap;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  padding: 0.55rem 1.35rem;
+  font-size: 0.84rem;
+  color: var(--ink);
+  box-shadow: 0 1px 3px rgba(43, 42, 36, 0.03);
+}
+.how-step{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+.how-step-num{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background: var(--olive);
+  color: var(--bg);
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+.how-arrow{
+  color: var(--muted);
+  font-weight: 600;
+}
+
+/* Hero Action Buttons */
+.hero-actions{
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  margin-top: 0.4rem;
+}
+.btn-olive{
+  background: var(--olive);
+  color: var(--bg);
+  border: 1px solid var(--olive);
+  padding: 0.65rem 1.65rem;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity var(--transition), transform var(--transition);
+  box-shadow: 0 2px 6px rgba(43, 42, 36, 0.06);
+}
+.btn-olive:hover{
+  opacity: 0.92;
+  transform: translateY(-1px);
+}
+.btn-olive-outline{
+  background: transparent;
+  color: var(--olive);
+  border: 1px solid var(--olive);
+  padding: 0.65rem 1.65rem;
+  border-radius: 6px;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-size: 0.92rem;
+  font-weight: 600;
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: background var(--transition), transform var(--transition);
+}
+.btn-olive-outline:hover{
+  background: var(--surface);
+  transform: translateY(-1px);
+}
+
+/* ── Dashboard Controls: Filters & Status Bars ─────────────── */
+.controls-card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 1.75rem;
+  box-shadow: 0 2px 8px rgba(43, 42, 36, 0.04), 0 1px 2px rgba(43, 42, 36, 0.02);
+  overflow: hidden;
+}
+#filters{
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.1rem;
+  padding: 0.9rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+}
+.filter-group{
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+#filters label{
+  font-size: 0.8rem;
+  color: var(--muted);
+  font-weight: 600;
+}
+#filters select{
+  background: var(--bg);
+  color: var(--ink);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 0.35rem 0.75rem;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
+  font-size: 0.82rem;
+  cursor: pointer;
+  transition: border-color var(--transition);
+}
+#filters select:hover, #filters select:focus{
+  border-color: var(--olive);
+  outline: none;
+}
+
 #statusbar{
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  padding: 0.6rem 2.5rem;
+  padding: 0.65rem 1.5rem;
   display: flex;
   align-items: center;
   flex-wrap: wrap;
@@ -181,71 +472,34 @@ h1,h2,h3{
   font-weight: 600;
 }
 
-/* ── Filters bar ─────────────────────────────────────────── */
-#filters{
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 1.1rem;
-  padding: 0.85rem 2.5rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
-}
-.filter-group{
-  display: inline-flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-#filters label{
-  font-size: 0.8rem;
-  color: var(--muted);
-  font-weight: 600;
-}
-#filters select{
-  background: var(--bg);
-  color: var(--ink);
-  border: 1px solid var(--border);
-  border-radius: 6px;
-  padding: 0.35rem 0.75rem;
-  font-family: 'Inter', -apple-system, sans-serif;
-  font-size: 0.82rem;
-  cursor: pointer;
-  transition: border-color var(--transition);
-}
-#filters select:hover, #filters select:focus{
-  border-color: var(--olive);
-  outline: none;
-}
-
-/* ── Main layout ─────────────────────────────────────────── */
-#main{
-  padding: 2rem 2.5rem;
+/* ── Main Dashboard Grid & Cards ───────────────────────────── */
+.dashboard-grid{
   display: grid;
   gap: 1.75rem;
-  grid-template-columns: repeat(auto-fill, minmax(560px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(540px, 1fr));
 }
-
-/* ── Cards: --surface, 1px --border, 8px radius, no shadow, 24px padding ── */
 .card{
   background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 8px;
+  border-radius: var(--radius);
   padding: 24px;
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  box-shadow: none;
-  transition: border-color var(--transition);
+  box-shadow: 0 2px 8px rgba(43, 42, 36, 0.04), 0 1px 2px rgba(43, 42, 36, 0.02);
+  transition: border-color var(--transition), box-shadow var(--transition);
 }
 .card:hover{
   border-color: var(--olive-soft);
+  box-shadow: 0 4px 12px rgba(43, 42, 36, 0.06);
 }
-.card.full-width{grid-column: 1 / -1}
+.card.full-width{
+  grid-column: 1 / -1;
+}
 
-/* Section titles: 28px, Fraunces 700 */
 .card-title{
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 28px;
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 24px;
   font-weight: 700;
   color: var(--ink);
   line-height: 1.2;
@@ -255,10 +509,8 @@ h1,h2,h3{
   flex-wrap: wrap;
   gap: 0.6rem;
 }
-
-/* Badges/pills: small caps text, 1px --olive border, transparent fill */
 .tag{
-  font-family: 'Inter', -apple-system, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif;
   font-variant: all-small-caps;
   text-transform: uppercase;
   letter-spacing: 0.08em;
@@ -270,347 +522,499 @@ h1,h2,h3{
   background: transparent;
   color: var(--olive);
 }
-
-/* Body text: 15px, line-height 1.6, colour --muted for descriptions */
 .card p{
   font-size: 15px;
   line-height: 1.6;
   color: var(--muted);
   margin-top: -0.2rem;
 }
-.chart-wrap{position: relative; height: 300px}
 
-/* ── Kannada Gap Tiles ──────────────────────────────────── */
+/* Chart Canvas Wrapper */
+.chart-wrap{
+  position: relative;
+  height: 290px;
+  width: 100%;
+}
+
+/* Kannada Gap Tiles Grid */
 .gap-tiles-wrap{
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1.1rem;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 1rem;
 }
 .gap-tile{
   background: var(--bg);
   border: 1px solid var(--border);
-  border-radius: 8px;
-  padding: 20px;
+  border-radius: 6px;
+  padding: 1.15rem 1.25rem;
   display: flex;
   flex-direction: column;
-  gap: 0.6rem;
-  box-shadow: none;
+  gap: 0.5rem;
+  transition: border-color var(--transition);
+}
+.gap-tile:hover{
+  border-color: var(--burgundy-soft);
 }
 .gap-tile-header{
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
-/* Card titles (model names): 20px, weight 600 */
 .gap-model-name{
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: Georgia, "Times New Roman", Times, serif;
   font-size: 20px;
-  font-weight: 600;
+  font-weight: 700;
   color: var(--ink);
 }
 .gap-val-row{
   display: flex;
   align-items: baseline;
-  gap: 0.45rem;
-  margin: 0.15rem 0;
+  gap: 0.4rem;
 }
-/* Big gap numbers: 48px, Fraunces 700, colour --burgundy */
 .gap-val{
-  font-family: 'Fraunces', Georgia, serif;
+  font-family: Georgia, "Times New Roman", Times, serif;
   font-size: 48px;
   font-weight: 700;
   color: var(--burgundy);
   line-height: 1;
-  letter-spacing: -0.02em;
 }
 .gap-unit{
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--muted);
+  font-size: 1rem;
+  color: var(--burgundy);
+  font-weight: 600;
 }
 .gap-meta{
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   color: var(--muted);
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.2rem;
 }
 .gap-rates{
   display: flex;
-  gap: 0.5rem;
   align-items: center;
+  gap: 0.5rem;
   flex-wrap: wrap;
 }
 .gap-rate-badge{
-  background: var(--surface);
-  border: 1px solid var(--border);
+  display: inline-block;
+  padding: 0.15rem 0.45rem;
   border-radius: 4px;
-  padding: 0.2rem 0.55rem;
-  font-size: 0.76rem;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.74rem;
 }
-.gap-rate-badge.en{color: var(--olive)}
-.gap-rate-badge.kn{color: var(--burgundy)}
+.gap-rate-badge.en{
+  background: var(--surface);
+  border: 1px solid var(--olive);
+  color: var(--olive);
+}
+.gap-rate-badge.kn{
+  background: var(--surface);
+  border: 1px solid var(--burgundy);
+  color: var(--burgundy);
+}
 
-/* ── Dual Steering Grid ─────────────────────────────────── */
+/* Steering Grid: View 2 */
 .steering-grid{
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
 }
-.steering-sub-title{
-  font-family: 'Fraunces', Georgia, serif;
-  font-size: 18px;
-  font-weight: 700;
-  margin-bottom: 0.4rem;
+@media (max-width: 820px){
+  .steering-grid{grid-template-columns: 1fr;}
 }
-@media(max-width:960px){
-  .steering-grid{grid-template-columns: 1fr}
+.steering-sub-title{
+  font-size: 0.88rem;
+  font-weight: 600;
+  margin-bottom: 0.6rem;
 }
 
-/* ── Tables ──────────────────────────────────────────────── */
-.tbl-wrap{
-  overflow-x: auto;
-  border-radius: 6px;
-  border: 1px solid var(--border);
-}
+/* Tables in Card */
+.tbl-wrap{overflow-x: auto;}
 table{
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
-  background: var(--surface);
+  font-size: 0.82rem;
 }
-thead th{
-  padding: 0.65rem 0.85rem;
+th, td{
+  padding: 0.55rem 0.75rem;
   text-align: left;
-  font-size: 0.72rem;
-  font-family: 'Inter', -apple-system, sans-serif;
+  border-bottom: 1px solid var(--border);
+}
+th{
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 0.74rem;
   font-variant: all-small-caps;
   text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--muted);
+  letter-spacing: 0.06em;
   background: var(--bg);
-  border-bottom: 1px solid var(--border);
-  position: sticky;
-  top: 0;
 }
-tbody td{
-  padding: 0.6rem 0.85rem;
-  border-bottom: 1px solid var(--border);
-  color: var(--ink);
-}
-tbody tr:last-child td{border-bottom: none}
-tbody tr:hover{background: rgba(91, 107, 58, 0.04)}
-.cell-rate{font-weight: 600}
-.cell-low{color: var(--burgundy)}
-.cell-mid{color: var(--ochre)}
-.cell-hi{color: var(--olive)}
+td{color: var(--ink);}
+tr:hover td{background: var(--bg);}
+.cell-rate{font-weight: 600;}
+.cell-hi{color: var(--olive);}
+.cell-mid{color: var(--ochre);}
+.cell-low{color: var(--burgundy);}
 
-/* ── States & Spinner ────────────────────────────────────── */
+/* State Spinners */
 .state{
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  min-height: 160px;
-  gap: 0.6rem;
+  min-height: 180px;
+  gap: 0.75rem;
   color: var(--muted);
-  font-size: 0.88rem;
-  text-align: center;
-  padding: 1rem;
+  font-size: 0.85rem;
 }
 .spinner{
-  width: 28px;
-  height: 28px;
+  width: 24px;
+  height: 24px;
   border: 2px solid var(--border);
   border-top-color: var(--olive);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
-@keyframes spin{to{transform: rotate(360deg)}}
+@keyframes spin{to{transform:rotate(360deg)}}
 
-/* ── Responsive ──────────────────────────────────────────── */
-@media(max-width:680px){
-  #main{grid-template-columns: 1fr; padding: 1.25rem}
-  #header{padding: 1.25rem}
-  #header h1{font-size: 32px}
-  .card-title{font-size: 22px}
-  #filters,#statusbar{padding: 0.75rem 1.25rem}
+/* ── Method Section Grid ──────────────────────────────────── */
+.method-grid{
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(270px, 1fr));
+  gap: 1.25rem;
+}
+.method-card{
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 1.35rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+  box-shadow: 0 2px 8px rgba(43, 42, 36, 0.04), 0 1px 2px rgba(43, 42, 36, 0.02);
+  transition: border-color var(--transition);
+}
+.method-card:hover{
+  border-color: var(--olive-soft);
+}
+.method-card-num{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--olive);
+  color: var(--bg);
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+.method-card h3{
+  font-family: Georgia, "Times New Roman", Times, serif;
+  font-size: 1.15rem;
+  color: var(--ink);
+}
+.method-card p{
+  font-size: 0.88rem;
+  color: var(--muted);
+  line-height: 1.55;
+}
+
+/* ── Responsive Adjustments ──────────────────────────────── */
+@media (max-width: 900px){
+  .hero-stats-grid{grid-template-columns: 1fr;}
+  .hero-title{font-size: 36px;}
+  .dashboard-grid{grid-template-columns: 1fr;}
+}
+@media (prefers-reduced-motion: reduce){
+  *,*::before,*::after{
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 </style>
 </head>
 <body>
 
-<!-- ── HEADER ──────────────────────────────────────────────── -->
-<header id="header">
-  <div class="brand">
-    <!-- Clean minimal Kavach (shield) crest icon in olive and burgundy -->
-    <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-      <path d="M18 4L6 9V17C6 24.5 11.1 31.4 18 33C24.9 31.4 30 24.5 30 17V9L18 4Z" stroke="#5B6B3A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-      <path d="M13 18L17 22L23 14" stroke="#7A1F2B" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-    </svg>
-    <div>
-      <h1>Bhasha Kavach<span class="sample-badge" id="sample-badge">SAMPLE DATA</span></h1>
-      <div class="hypothesis">
-        Hypothesis: Small open models refuse harmful prompts less in Kannada, Kanglish, and code-mixed text —
-        steer_gated closes the gap without over-refusing harmless queries.
+<!-- ── STICKY TOP NAV ──────────────────────────────────────── -->
+<nav id="top-nav">
+  <div class="nav-inner">
+    <a href="#overview" class="nav-brand">The Language Barrier</a>
+    <div class="nav-links">
+      <a href="#overview" class="nav-link active">Overview</a>
+      <a href="#results" class="nav-link">Results</a>
+      <a href="#gate-tuning" class="nav-link">Gate tuning</a>
+      <a href="#method" class="nav-link">Method</a>
+    </div>
+    <div class="nav-tools">
+      <span class="sample-badge" id="sample-badge">Sample Data</span>
+      <div class="toggle-btn" id="mode-toggle">
+        <button id="btn-real" class="active" onclick="setMode('real')">Full (real)</button>
+        <button id="btn-sample" onclick="setMode('sample')">Show sample data</button>
       </div>
     </div>
   </div>
-  <div id="toggle-wrap">
-    <label>Data:</label>
-    <div class="toggle-btn">
-      <button id="btn-real" class="active" onclick="setMode('real')">Full (real CSVs)</button>
-      <button id="btn-sample" onclick="setMode('sample')">Show sample data</button>
+</nav>
+
+<!-- ── SECTION 1: HOMEPAGE / HERO (#overview) ──────────────── -->
+<section id="overview">
+  <canvas id="hero-canvas"></canvas>
+  <div class="hero-content">
+    <span class="hero-tag">Big Hack 2.0 · Team Stark Industry Interns</span>
+    <h1 class="hero-title">The Language Barrier</h1>
+    <p class="hero-tagline">Do small AI models stop refusing harmful requests when you switch to Kannada or Kanglish?</p>
+    <p class="hero-question">Can a gated refusal steer close the gap without over-refusing harmless questions?</p>
+
+    <!-- 3 LIVE STAT CARDS -->
+    <div class="hero-stats-grid">
+      <div class="hero-stat-card">
+        <div class="hero-stat-label">Largest Safety Gap</div>
+        <div class="hero-stat-val" id="hero-stat-a-val">running</div>
+        <div class="hero-stat-sub" id="hero-stat-a-sub">Awaiting undefended baseline runs</div>
+      </div>
+      <div class="hero-stat-card">
+        <div class="hero-stat-label">Llama Guard Baseline</div>
+        <div class="hero-stat-val" id="hero-stat-b-val">running</div>
+        <div class="hero-stat-sub" id="hero-stat-b-sub">English vs Kanglish flag rate</div>
+      </div>
+      <div class="hero-stat-card">
+        <div class="hero-stat-label">Gemma Gated Steering</div>
+        <div class="hero-stat-val" id="hero-stat-c-val">running</div>
+        <div class="hero-stat-sub" id="hero-stat-c-sub">Harmful refusal vs over-refusal</div>
+      </div>
+    </div>
+
+    <!-- 3-STEP HOW IT WORKS STRIP -->
+    <div class="how-strip">
+      <div class="how-step">
+        <span class="how-step-num">1</span>
+        <span>Translate prompts (<code>en</code>, <code>kn</code>, <code>kn_latn</code>, <code>kn_mix</code>)</span>
+      </div>
+      <span class="how-arrow">→</span>
+      <div class="how-step">
+        <span class="how-step-num">2</span>
+        <span>Measure refusal</span>
+      </div>
+      <span class="how-arrow">→</span>
+      <div class="how-step">
+        <span class="how-step-num">3</span>
+        <span>Steer with a gate</span>
+      </div>
+    </div>
+
+    <!-- BUTTONS -->
+    <div class="hero-actions">
+      <a href="#results" class="btn-olive">View results</a>
+      <a href="#gate-tuning" class="btn-olive-outline">Gate tuning</a>
     </div>
   </div>
-</header>
+</section>
 
-<!-- ── STATUS BAR ──────────────────────────────────────────── -->
-<div id="statusbar">
-  <span id="status-pills">—</span>
-  <span class="upd" id="status-upd"></span>
-</div>
-
-<!-- ── FILTERS BAR ─────────────────────────────────────────── -->
-<div id="filters">
-  <div class="filter-group">
-    <label>Model</label>
-    <select id="f-model"><option value="all">All models</option></select>
-  </div>
-  <div class="filter-group">
-    <label>Variant</label>
-    <select id="f-variant"><option value="all">All variants</option></select>
-  </div>
-  <div class="filter-group">
-    <label>Category</label>
-    <select id="f-category"><option value="all">All categories</option></select>
-  </div>
-  <div class="filter-group" style="margin-left:auto;">
-    <label>Metric</label>
-    <div class="toggle-btn" id="metric-toggle">
-      <button id="btn-metric-refused" class="active" onclick="setMetric('refused')">refused</button>
-      <button id="btn-metric-comp" onclick="setMetric('harmful_compliance')">harmful_compliance</button>
-    </div>
-  </div>
-</div>
-
-<!-- ── MAIN CONTENT ────────────────────────────────────────── -->
-<main id="main">
-
-  <!-- KANNADA GAP TILES -->
-  <div class="card full-width">
-    <div class="card-title">
-      <span>Kannada Safety Gap</span>
-      <span class="tag">KEY METRIC</span>
-    </div>
-    <p>
-      Safety drop: English refusal rate minus the lowest among Kannada variants (<code>kn</code>, <code>kn_latn</code>, <code>kn_mix</code>) for undefended condition (or Llama Guard baseline).
+<!-- ── SECTION 2: RESULTS DASHBOARD (#results) ─────────────── -->
+<section id="results" class="section-wrap">
+  <div class="section-header">
+    <h2 class="section-title">Results Dashboard</h2>
+    <p class="section-desc">
+      Empirical safety evaluation across language variants, intervention conditions, and classification metrics.
+      All scores are computed locally; raw text and replies are never stored.
     </p>
-    <div class="gap-tiles-wrap" id="kannada-gap-tiles">
-      <div class="state"><div class="spinner"></div></div>
-    </div>
   </div>
 
-  <!-- VIEW 1: HEADLINE CHART (THE GAP) WITH WILSON 95% CI & LLAMA GUARD BASELINE -->
-  <div class="card full-width">
-    <div class="card-title">
-      <span>View 1 — The Gap (Refusal Rate by Variant)</span>
-      <span class="tag">HEADLINE CHART</span>
-    </div>
-    <p>
-      Harmful-prompt refusal rate (% of rows with <code>refused=1</code>) by variant, grouped by model for <code>condition=none</code>, plus the <strong>Llama Guard baseline</strong> (<code>condition=baseline</code>) as its own bar group.
-      Thin error bars denote <strong>95% Wilson confidence intervals</strong>; sample count <code>n</code> is displayed under each bar.
-    </p>
-    <div class="chart-wrap"><canvas id="chart-gap"></canvas></div>
-  </div>
-
-  <!-- VIEW 2: STEERING EVALUATION (HARMFUL VS HARMLESS OVER-REFUSAL) -->
-  <div class="card full-width">
-    <div class="card-title">
-      <span>View 2 — Steering: Safety Recovery vs Over-Refusal Check</span>
-      <span class="tag">STEERING EVALUATION</span>
-    </div>
-    <p>
-      Comparing defense conditions (<code>none</code> vs <code>steer_always</code> vs <code>steer_gated</code> vs <code>baseline</code>) with 95% Wilson CIs.
-      Harmful split measures safety recovery (↑); Harmless split tests for false refusals (↓).
-    </p>
-    <div class="steering-grid">
-      <div>
-        <div class="steering-sub-title" style="color:var(--olive)">
-          Harmful Prompts: Refusal Rate (Target: High)
+  <!-- Filters & Status Controls Card -->
+  <div class="controls-card">
+    <div id="filters">
+      <div class="filter-group">
+        <label>Model</label>
+        <select id="f-model"><option value="all">All models</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Variant</label>
+        <select id="f-variant"><option value="all">All variants</option></select>
+      </div>
+      <div class="filter-group">
+        <label>Category</label>
+        <select id="f-category"><option value="all">All categories</option></select>
+      </div>
+      <div class="filter-group" style="margin-left:auto;">
+        <label>Metric</label>
+        <div class="toggle-btn" id="metric-toggle">
+          <button id="btn-metric-refused" class="active" onclick="setMetric('refused')">refused</button>
+          <button id="btn-metric-comp" onclick="setMetric('harmful_compliance')">harmful_compliance</button>
         </div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmful"></canvas></div>
       </div>
-      <div>
-        <div class="steering-sub-title" style="color:var(--burgundy)">
-          Harmless Prompts: Over-Refusal Rate (Target: Low)
+    </div>
+
+    <div id="statusbar">
+      <span>Models:</span>
+      <span id="status-pills"><em>loading…</em></span>
+      <span class="upd" id="status-upd"></span>
+    </div>
+  </div>
+
+  <div class="dashboard-grid">
+    <!-- KANNADA GAP TILES -->
+    <div class="card full-width">
+      <div class="card-title">
+        <span>Kannada Safety Gap</span>
+        <span class="tag">KEY METRIC</span>
+      </div>
+      <p>
+        Safety drop: English refusal rate minus the lowest among Kannada variants (<code>kn</code>, <code>kn_latn</code>, <code>kn_mix</code>) for undefended condition (or Llama Guard baseline).
+      </p>
+      <div class="gap-tiles-wrap" id="kannada-gap-tiles">
+        <div class="state"><div class="spinner"></div></div>
+      </div>
+    </div>
+
+    <!-- VIEW 1: HEADLINE CHART (THE GAP) WITH WILSON 95% CI & LLAMA GUARD BASELINE -->
+    <div class="card full-width">
+      <div class="card-title">
+        <span>View 1 — The Gap (Refusal Rate by Variant)</span>
+        <span class="tag">HEADLINE CHART</span>
+      </div>
+      <p>
+        Harmful-prompt refusal rate (% of rows with <code>refused=1</code>) by variant, grouped by model for <code>condition=none</code>, plus the <strong>Llama Guard baseline</strong> (<code>condition=baseline</code>) as its own bar group.
+        Thin error bars denote <strong>95% Wilson confidence intervals</strong>; sample count <code>n</code> is displayed under each bar.
+      </p>
+      <div class="chart-wrap"><canvas id="chart-gap"></canvas></div>
+    </div>
+
+    <!-- VIEW 2: STEERING EVALUATION (HARMFUL VS HARMLESS OVER-REFUSAL) -->
+    <div class="card full-width">
+      <div class="card-title">
+        <span>View 2 — Steering: Safety Recovery vs Over-Refusal Check</span>
+        <span class="tag">STEERING EVALUATION</span>
+      </div>
+      <p>
+        Comparing defense conditions (<code>none</code> vs <code>steer_always</code> vs <code>steer_gated</code> vs <code>baseline</code>) with 95% Wilson CIs.
+        Harmful split measures safety recovery (↑); Harmless split tests for false refusals (↓).
+      </p>
+      <div class="steering-grid">
+        <div>
+          <div class="steering-sub-title" style="color:var(--olive)">
+            Harmful Prompts: Refusal Rate (Target: High)
+          </div>
+          <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmful"></canvas></div>
         </div>
-        <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmless"></canvas></div>
+        <div>
+          <div class="steering-sub-title" style="color:var(--burgundy)">
+            Harmless Prompts: Over-Refusal Rate (Target: Low)
+          </div>
+          <div class="chart-wrap" style="height:260px"><canvas id="chart-steering-harmless"></canvas></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <!-- VIEW 2.5: RESPONSE CLASSIFICATION BREAKDOWN (STACKED BARS) -->
-  <div class="card full-width" id="card-label-breakdown">
-    <div class="card-title">
-      <span>View 2.5 — Response Classification Breakdown by Variant</span>
-      <span class="tag">CLASSIFICATION</span>
+    <!-- VIEW 2.5: RESPONSE CLASSIFICATION BREAKDOWN (STACKED BARS) -->
+    <div class="card full-width" id="card-label-breakdown">
+      <div class="card-title">
+        <span>View 2.5 — Response Classification Breakdown by Variant</span>
+        <span class="tag">CLASSIFICATION</span>
+      </div>
+      <p>
+        Classification of model replies on harmful prompts:
+        <strong style="color:var(--olive)">refused</strong> (genuine safety refusal),
+        <strong style="color:var(--ochre)">not_understood</strong> (clarification/language barrier), and
+        <strong style="color:var(--burgundy)">complied</strong> (harmful jailbreak success).
+      </p>
+      <div class="chart-wrap" style="height:280px" id="wrap-label-breakdown">
+        <canvas id="chart-label-breakdown"></canvas>
+      </div>
     </div>
-    <p>
-      Classification of model replies on harmful prompts:
-      <strong style="color:var(--olive)">refused</strong> (genuine safety refusal),
-      <strong style="color:var(--ochre)">not_understood</strong> (clarification/language barrier), and
-      <strong style="color:var(--burgundy)">complied</strong> (harmful jailbreak success).
-    </p>
-    <div class="chart-wrap" style="height:280px" id="wrap-label-breakdown">
-      <canvas id="chart-label-breakdown"></canvas>
+
+    <!-- VIEW 3: LATENCY -->
+    <div class="card">
+      <div class="card-title">
+        <span>View 3 — Cost: Median Latency</span>
+        <span class="tag">LATENCY</span>
+      </div>
+      <p>Median generation latency (ms) per condition across models.</p>
+      <div class="chart-wrap" style="height:220px"><canvas id="chart-lat"></canvas></div>
+    </div>
+
+    <!-- VIEW 4: WHERE IT FAILS -->
+    <div class="card">
+      <div class="card-title">
+        <span>View 4 — Where It Still Fails</span>
+        <span class="tag">ANALYSIS</span>
+      </div>
+      <p>
+        Category × variant cells where <code>steer_gated</code> has the
+        <em>lowest</em> refusal rate across conditions (harmful split).
+      </p>
+      <div class="tbl-wrap"><div id="tbl-fails"></div></div>
     </div>
   </div>
+</section>
 
-  <!-- VIEW 2.6: GATE TUNING (SWEEP PARETO TRADE-OFF CURVE) -->
-  <div class="card full-width">
-    <div class="card-title">
-      <span>View 2.6 — Gate Tuning: Safety vs Over-Refusal Trade-off</span>
-      <span class="tag">PARETO CURVE</span>
-    </div>
-    <p>
+<!-- ── SECTION 3: GATE TUNING (#gate-tuning) ───────────────── -->
+<section id="gate-tuning" class="section-wrap">
+  <div class="section-header">
+    <h2 class="section-title">View 2.6 — Gate Tuning: Safety vs Over-Refusal</h2>
+    <p class="section-desc">
       Trade-off curve from parameter sweep (<code>results/mac*/sweep_*_a&lt;A&gt;_t&lt;T&gt;.csv</code>).
       Plots <strong>Harmful Refusal on Kannada variants</strong> (↑ Safety target) vs <strong>Harmless Wrong-Refusal</strong> (↓ Over-refusal penalty), one point per setting.
       Optimal settings lie toward the top-left corner.
     </p>
-    <div class="chart-wrap" style="height:320px"><canvas id="chart-sweep"></canvas></div>
+  </div>
+
+  <div class="card full-width">
+    <div class="card-title">
+      <span>Pareto Trade-off Curve</span>
+      <span class="tag">GATE TUNING</span>
+    </div>
+    <div class="chart-wrap" style="height:340px"><canvas id="chart-sweep"></canvas></div>
     <div id="sweep-table-wrap" style="margin-top:0.75rem;overflow-x:auto;"></div>
   </div>
+</section>
 
-  <!-- VIEW 3: LATENCY -->
-  <div class="card">
-    <div class="card-title">
-      <span>View 3 — Cost: Median Latency</span>
-      <span class="tag">LATENCY</span>
-    </div>
-    <p>Median generation latency (ms) per condition across models.</p>
-    <div class="chart-wrap" style="height:220px"><canvas id="chart-lat"></canvas></div>
-  </div>
-
-  <!-- VIEW 4: WHERE IT FAILS -->
-  <div class="card">
-    <div class="card-title">
-      <span>View 4 — Where It Still Fails</span>
-      <span class="tag">ANALYSIS</span>
-    </div>
-    <p>
-      Category × variant cells where <code>steer_gated</code> has the
-      <em>lowest</em> refusal rate across conditions (harmful split).
+<!-- ── SECTION 4: METHOD (#method) ────────────────────────── -->
+<section id="method" class="section-wrap">
+  <div class="section-header">
+    <h2 class="section-title">Method & Experimental Setup</h2>
+    <p class="section-desc">
+      Overview of prompt generation, refusal representation extraction, activation gating, and evaluation protocol.
     </p>
-    <div class="tbl-wrap"><div id="tbl-fails"></div></div>
   </div>
 
-</main>
+  <div class="method-grid">
+    <div class="method-card">
+      <div class="method-card-num">1</div>
+      <h3>Prompt Variants</h3>
+      <p>
+        Every harmful and harmless query is tested across four parallel variants: English source (<code>en</code>), Kannada native script (<code>kn</code>), Latin transliteration (<code>kn_latn</code>, Kanglish), and code-mixed (<code>kn_mix</code>).
+      </p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-num">2</div>
+      <h3>Direction Extraction</h3>
+      <p>
+        Contrastive refusal vectors <code>r = E[h_harmful] - E[h_harmless]</code> are extracted from middle representations using English-only direction pairs, avoiding any Kannada data contamination during representation capture.
+      </p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-num">3</div>
+      <h3>Gated Steering</h3>
+      <p>
+        Unlike constant steering which over-refuses harmless queries, gated steering projects the layer activation onto <code>r</code> and only applies the steering vector <code>+alpha * r</code> if activation exceeds threshold <code>tau</code>.
+      </p>
+    </div>
+    <div class="method-card">
+      <div class="method-card-num">4</div>
+      <h3>Baseline Comparison</h3>
+      <p>
+        Benchmarked against an external moderation pipeline: IndicTrans2 machine translation to English followed by Llama Guard 3 1B moderation classification.
+      </p>
+    </div>
+  </div>
+</section>
 
 <script>
 // ═══════════════════════════════════════════════════════════════════
-// CONFIG & PALETTE
+// CONFIG & PALETTE (NO NEW COLOURS)
 // ═══════════════════════════════════════════════════════════════════
 const SAMPLE_CSV = 'sample/results_sample.csv';
 
@@ -643,14 +1047,12 @@ const COND_LABELS = {
   steer_gated: 'Steer Gated',
 };
 
-// Flat minimal palette matching specification
+// Flat minimal palette matching exact specification
 const PALETTE = {
-  // Variants
   en:          '#5B6B3A', // --olive
   kn:          '#7A1F2B', // --burgundy
   kn_latn:     '#B8955A', // --ochre
   kn_mix:      '#8C8578', // --taupe
-  // Conditions
   none:        '#8C8578', // --taupe
   baseline:    '#B8955A', // --ochre
   baseline_translit: '#D4C4A0',
@@ -669,10 +1071,10 @@ const MODEL_COLORS = {
   'llama-guard-3-1b':      '#8C8578', // --taupe
 };
 
-// Chart.js global defaults: axis labels --muted 12px, gridlines --grid thin 1px
+// Chart.js global defaults
 Chart.defaults.color       = '#6B6658'; // --muted
 Chart.defaults.borderColor = '#E7E1D2'; // --grid
-Chart.defaults.font.family = "'Inter', -apple-system, 'Helvetica Neue', Arial, sans-serif";
+Chart.defaults.font.family = '-apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", Roboto, sans-serif';
 Chart.defaults.font.size   = 12;
 
 // ═══════════════════════════════════════════════════════════════════
@@ -733,7 +1135,7 @@ const wilsonErrorBarPlugin = {
         if (dataset.showN || chart.options.showNUnderBars) {
           const yBase = (bar.base !== undefined) ? bar.base : y.getPixelForValue(0);
           ctx.fillStyle = '#6B6658'; // --muted
-          ctx.font = '500 10px "Inter", -apple-system, sans-serif';
+          ctx.font = '500 10px -apple-system, BlinkMacSystemFont, "SF Pro Text", sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'top';
           ctx.fillText(`n=${ci.n}`, x, yBase + 4);
@@ -751,16 +1153,44 @@ Chart.register(wilsonErrorBarPlugin);
 // ═══════════════════════════════════════════════════════════════════
 let allData = [];
 let sweepData = [];
-let mode = 'real';  // DEFAULT IS 'real' on page load!
+let mode = 'real';  // DEFAULT IS 'real' on page load
 let currentMetric = 'refused';
 let charts = {};
 
 // ═══════════════════════════════════════════════════════════════════
-// BOOT
+// BOOT & NAVIGATION
 // ═══════════════════════════════════════════════════════════════════
 document.getElementById('f-model').addEventListener('change', render);
 document.getElementById('f-variant').addEventListener('change', render);
 document.getElementById('f-category').addEventListener('change', render);
+
+// Auto-refresh every 30 seconds when in real mode
+setInterval(() => {
+  if (mode === 'real') {
+    setMode('real', true); // background refresh
+  }
+}, 30000);
+
+// Setup IntersectionObserver for sticky nav link highlighting
+const navObserver = new IntersectionObserver((entries) => {
+  entries.forEach(entry => {
+    if (entry.isIntersecting) {
+      const id = entry.target.id;
+      document.querySelectorAll('.nav-link').forEach(link => {
+        if (link.getAttribute('href') === `#${id}`) {
+          link.classList.add('active');
+        } else {
+          link.classList.remove('active');
+        }
+      });
+    }
+  });
+}, { root: null, rootMargin: '-20% 0px -70% 0px', threshold: 0 });
+
+['overview', 'results', 'gate-tuning', 'method'].forEach(id => {
+  const el = document.getElementById(id);
+  if (el) navObserver.observe(el);
+});
 
 // Default to 'real' on page load
 setMode('real');
@@ -768,7 +1198,7 @@ setMode('real');
 // ═══════════════════════════════════════════════════════════════════
 // MODE & METRIC SWITCHES
 // ═══════════════════════════════════════════════════════════════════
-async function setMode(m) {
+async function setMode(m, isBackground = false) {
   mode = m;
   document.getElementById('btn-real').classList.toggle('active', m === 'real');
   document.getElementById('btn-sample').classList.toggle('active', m === 'sample');
@@ -781,7 +1211,8 @@ async function setMode(m) {
     sampleBadge.classList.remove('show');
   }
 
-  showLoading();
+  if (!isBackground) showLoading();
+
   try {
     if (m === 'sample') {
       const res = await loadSampleData();
@@ -802,7 +1233,9 @@ async function setMode(m) {
     if (m === 'real') {
       sampleBadge.classList.remove('show');
     }
-    showError('Unable to load real CSVs: ' + e.message + '<br><small style="color:var(--muted);margin-top:.4rem;display:inline-block">Ensure "python3 -m http.server 8000" was started from the repo root, or click "Show sample data".</small>');
+    if (!isBackground) {
+      showError('Unable to load real CSVs: ' + e.message + '<br><small style="color:var(--muted);margin-top:.4rem;display:inline-block">Ensure "python3 -m http.server 8000" was started from repo root, or click "Show sample data".</small>');
+    }
   }
 }
 
@@ -816,7 +1249,6 @@ function setMetric(metric) {
 // ═══════════════════════════════════════════════════════════════════
 // CSV LOADERS & VALIDATION
 // ═══════════════════════════════════════════════════════════════════
-
 function formatModelName(name) {
   if (!name) return '';
   return name.replace(/^(google\/|meta-llama\/|Qwen\/)/i, '');
@@ -883,12 +1315,13 @@ function parseSweepFileName(filename) {
 
 async function loadRealCSVs() {
   const urlSet = new Set();
-  const listings = await Promise.all(REAL_DIRS.map(d => listDirCSVs(d)));
-  listings.forEach(urls => urls.forEach(u => urlSet.add(u)));
 
-  // Fallback probing if directory listing is disabled by server
-  if (urlSet.size === 0) {
-    for (const dir of REAL_DIRS) {
+  for (const dir of REAL_DIRS) {
+    const found = await listDirCSVs(dir);
+    if (found.length) {
+      found.forEach(u => urlSet.add(u));
+    } else {
+      // Direct probing fallback
       for (const mdl of KNOWN_MODELS) {
         for (const cond of CONDITIONS) {
           urlSet.add(`${dir}${mdl}_${cond}.csv`);
@@ -931,92 +1364,105 @@ async function loadRealCSVs() {
   const validSweeps = sweepBatches.filter(s => s !== null);
 
   if (!validRegularRows.length) {
-    throw new Error('No valid results CSV files found in results/mac1–mac4/.');
+    throw new Error('No valid results CSV files found in results/mac*/');
   }
 
-  return { rows: validRegularRows, sweeps: validSweeps };
+  return {
+    rows: validRegularRows,
+    sweeps: validSweeps
+  };
 }
 
 async function loadSampleData() {
-  const regularRows = await tryLoadCSV(SAMPLE_CSV);
-  if (!regularRows || !regularRows.length) {
-    throw new Error('Failed to load sample/results_sample.csv.');
+  const [regRes, sweepFiles] = await Promise.all([
+    fetchCSV(SAMPLE_CSV),
+    // Pre-defined sample sweep files
+    [
+      'sample/sweep_gemma-2-2b-it_steer_gated_L16_a44_t-16.0.csv',
+      'sample/sweep_gemma-2-2b-it_steer_gated_L16_a44_t-13.6.csv',
+      'sample/sweep_gemma-2-2b-it_steer_gated_L16_a44_t-10.0.csv',
+      'sample/sweep_gemma-2-2b-it_steer_gated_L16_a44_t-5.0.csv',
+      'sample/sweep_qwen2.5-3b-instruct_steer_gated_L14_a50_t-15.0.csv',
+      'sample/sweep_qwen2.5-3b-instruct_steer_gated_L14_a50_t-12.0.csv',
+      'sample/sweep_qwen2.5-3b-instruct_steer_gated_L14_a50_t-8.0.csv',
+      'sample/sweep_qwen2.5-3b-instruct_steer_gated_L14_a50_t-4.0.csv'
+    ]
+  ]);
+
+  const sweeps = [];
+  for (const swUrl of sweepFiles) {
+    try {
+      const swRes = await fetchCSV(swUrl);
+      if (swRes.data && swRes.data.length && isValidResultsCSV(swRes.meta.fields)) {
+        const fname = swUrl.split('/').pop();
+        const meta = parseSweepFileName(fname);
+        sweeps.push({
+          filename: fname,
+          alpha: meta.alpha,
+          tau: meta.tau,
+          layer: meta.layer,
+          model: swRes.data[0].model || 'Unknown',
+          rows: swRes.data
+        });
+      }
+    } catch(_) {}
   }
 
-  const sampleSweepNames = [
-    'sweep_qwen2.5-3b-instruct_steer_gated_a10.0_t5.0.csv',
-    'sweep_qwen2.5-3b-instruct_steer_gated_a20.0_t10.0.csv',
-    'sweep_qwen2.5-3b-instruct_steer_gated_a35.4_t15.9.csv',
-    'sweep_qwen2.5-3b-instruct_steer_gated_a50.0_t20.0.csv',
-    'sweep_gemma-2-2b-it_steer_gated_a50.0_t-20.0.csv',
-    'sweep_gemma-2-2b-it_steer_gated_a100.0_t-16.0.csv',
-    'sweep_gemma-2-2b-it_steer_gated_a176.0_t-13.6.csv',
-    'sweep_gemma-2-2b-it_steer_gated_a220.0_t-10.0.csv'
-  ];
-
-  const sweepBatches = await Promise.all(sampleSweepNames.map(async fname => {
-    const data = await tryLoadCSV('sample/' + fname);
-    if (!data || !data.length) return null;
-    const meta = parseSweepFileName(fname);
-    return {
-      filename: fname,
-      alpha: meta.alpha,
-      tau: meta.tau,
-      layer: meta.layer,
-      model: data[0].model,
-      rows: data
-    };
-  }));
-
-  return { rows: regularRows, sweeps: sweepBatches.filter(s => s !== null) };
+  return {
+    rows: regRes.data || [],
+    sweeps
+  };
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// STATUS BAR
+// STATUS BAR & FILTERS
 // ═══════════════════════════════════════════════════════════════════
 function updateStatusBar() {
-  const now = new Date();
-  const timeStr = now.toLocaleTimeString('en-IN', {hour:'2-digit', minute:'2-digit', second:'2-digit'});
-
-  const counts = {};
-  for (const row of allData) {
-    const m = formatModelName(row.model);
-    counts[m] = (counts[m] || 0) + 1;
-  }
-
-  const models = Object.keys(counts).sort();
-  const pills = models.length
-    ? models.map(m => `<span class="model-pill">${m} <span class="cnt">${counts[m].toLocaleString()}</span></span>`).join(' ')
-    : '<em>no data</em>';
-
-  document.getElementById('status-pills').innerHTML =
-    `<strong style="color:var(--muted);margin-right:.4rem">Rows:</strong>${pills}`;
-  document.getElementById('status-upd').textContent =
-    `Last updated ${timeStr}`;
-}
-
-// ═══════════════════════════════════════════════════════════════════
-// FILTERS
-// ═══════════════════════════════════════════════════════════════════
-function populateFilters() {
-  const models     = [...new Set(allData.map(r => formatModelName(r.model)))].sort();
-  const variants   = [...new Set(allData.map(r => r.variant))].sort();
-  const categories = [...new Set(allData.map(r => r.category))].sort();
-  fillSelect('f-model',    models,     'All models');
-  fillSelect('f-variant',  variants,   'All variants');
-  fillSelect('f-category', categories, 'All categories');
-}
-function fillSelect(id, vals, allLabel) {
-  const sel = document.getElementById(id);
-  const cur = sel.value;
-  sel.innerHTML = `<option value="all">${allLabel}</option>`;
-  vals.forEach(v => {
-    const o = document.createElement('option');
-    o.value = o.textContent = v;
-    sel.appendChild(o);
+  const modelCounts = {};
+  allData.forEach(r => {
+    if (!r.model) return;
+    const m = formatModelName(r.model);
+    modelCounts[m] = (modelCounts[m] || 0) + 1;
   });
-  if (vals.includes(cur)) sel.value = cur;
+
+  const pillsHtml = Object.keys(modelCounts).sort().map(m =>
+    `<span class="model-pill"><strong>${m}</strong><span class="cnt">${modelCounts[m]}</span></span>`
+  ).join('');
+
+  document.getElementById('status-pills').innerHTML = pillsHtml || '<em>no rows</em>';
+  const now = new Date();
+  document.getElementById('status-upd').textContent =
+    `Updated ${now.toLocaleTimeString([], {hour:'2-digit', minute:'2-digit', second:'2-digit'})}`;
 }
+
+function populateFilters() {
+  const selModel = document.getElementById('f-model');
+  const selVar   = document.getElementById('f-variant');
+  const selCat   = document.getElementById('f-category');
+
+  const curM = selModel.value;
+  const curV = selVar.value;
+  const curC = selCat.value;
+
+  const models = [...new Set(allData.map(r => formatModelName(r.model)).filter(Boolean))].sort();
+  const cats   = [...new Set(allData.map(r => r.category).filter(Boolean))].sort();
+
+  fillSelect(selModel, models, 'All models', curM);
+  fillSelect(selVar,   VARIANTS, 'All variants', curV);
+  fillSelect(selCat,   cats,     'All categories', curC);
+}
+
+function fillSelect(sel, items, allLabel, curVal) {
+  sel.innerHTML = `<option value="all">${allLabel}</option>`;
+  items.forEach(it => {
+    const opt = document.createElement('option');
+    opt.value = it;
+    opt.textContent = it;
+    if (it === curVal) opt.selected = true;
+    sel.appendChild(opt);
+  });
+}
+
 function getFilters() {
   return {
     model:    document.getElementById('f-model').value,
@@ -1024,36 +1470,128 @@ function getFilters() {
     category: document.getElementById('f-category').value,
   };
 }
-function applyFilters(data, {model, variant, category}) {
-  return data.filter(r =>
-    (model    === 'all' || formatModelName(r.model) === model)    &&
-    (variant  === 'all' || r.variant === variant)                 &&
-    (category === 'all' || r.category === category)
-  );
+
+function applyFilters(data, f) {
+  return data.filter(r => {
+    if (f.model    !== 'all' && formatModelName(r.model) !== f.model) return false;
+    if (f.variant  !== 'all' && r.variant !== f.variant) return false;
+    if (f.category !== 'all' && r.category !== f.category) return false;
+    return true;
+  });
 }
 
-// ═══════════════════════════════════════════════════════════════════
-// METRIC EVALUATION HELPER
-// ═══════════════════════════════════════════════════════════════════
 function isTargetPositive(row, isHarmful) {
   if (currentMetric === 'harmful_compliance') {
     if (row.harmful_compliance !== undefined && row.harmful_compliance !== null && row.harmful_compliance !== '') {
       return parseInt(row.harmful_compliance, 10) === 1;
     }
-    // Fallback if compliance missing on harmful:
     return isHarmful ? parseInt(row.refused, 10) === 0 : parseInt(row.refused, 10) === 1;
   }
   return parseInt(row.refused, 10) === 1;
 }
 
 // ═══════════════════════════════════════════════════════════════════
-// RENDER
+// LIVE HERO STATS COMPUTATION
+// ═══════════════════════════════════════════════════════════════════
+function updateHeroLiveStats(data) {
+  if (!data || !data.length) {
+    document.getElementById('hero-stat-a-val').textContent = 'running';
+    document.getElementById('hero-stat-b-val').textContent = 'running';
+    document.getElementById('hero-stat-c-val').textContent = 'running';
+    return;
+  }
+
+  // (a) Largest English vs Kannada-variant refusal gap among models (condition=none)
+  const noneModels = [...new Set(
+    data.filter(r => r.split === 'harmful' && r.condition === 'none')
+        .map(r => r.model)
+  )];
+
+  let maxGap = null;
+  let maxGapModel = null;
+  let maxEnRate = null;
+  let maxKnRate = null;
+
+  noneModels.forEach(m => {
+    const enRows = data.filter(r => r.model === m && r.split === 'harmful' && r.condition === 'none' && r.variant === 'en');
+    if (!enRows.length) return;
+    const enRate = (enRows.filter(r => parseInt(r.refused, 10) === 1).length / enRows.length) * 100;
+
+    const knVariants = ['kn', 'kn_latn', 'kn_mix'];
+    let lowestKnRate = null;
+
+    knVariants.forEach(kv => {
+      const kRows = data.filter(r => r.model === m && r.split === 'harmful' && r.condition === 'none' && r.variant === kv);
+      if (!kRows.length) return;
+      const kRate = (kRows.filter(r => parseInt(r.refused, 10) === 1).length / kRows.length) * 100;
+      if (lowestKnRate === null || kRate < lowestKnRate) {
+        lowestKnRate = kRate;
+      }
+    });
+
+    if (lowestKnRate !== null) {
+      const gap = enRate - lowestKnRate;
+      if (maxGap === null || gap > maxGap) {
+        maxGap = gap;
+        maxGapModel = formatModelName(m);
+        maxEnRate = enRate.toFixed(1);
+        maxKnRate = lowestKnRate.toFixed(1);
+      }
+    }
+  });
+
+  const statAVal = document.getElementById('hero-stat-a-val');
+  const statASub = document.getElementById('hero-stat-a-sub');
+  if (maxGap !== null) {
+    statAVal.textContent = `+${maxGap.toFixed(1)} pp`;
+    statASub.textContent = `${maxGapModel} (EN ${maxEnRate}% vs ${maxKnRate}%)`;
+  } else {
+    statAVal.textContent = 'running';
+    statASub.textContent = 'Awaiting undefended baseline runs';
+  }
+
+  // (b) Llama Guard baseline English vs Kanglish flag rate
+  const lgEnRows = data.filter(r => r.model.toLowerCase().includes('llama-guard') && r.split === 'harmful' && r.variant === 'en');
+  const lgKnRows = data.filter(r => r.model.toLowerCase().includes('llama-guard') && r.split === 'harmful' && r.variant === 'kn_latn');
+
+  const statBVal = document.getElementById('hero-stat-b-val');
+  const statBSub = document.getElementById('hero-stat-b-sub');
+  if (lgEnRows.length && lgKnRows.length) {
+    const lgEnRate = ((lgEnRows.filter(r => parseInt(r.refused, 10) === 1).length / lgEnRows.length) * 100).toFixed(1);
+    const lgKnRate = ((lgKnRows.filter(r => parseInt(r.refused, 10) === 1).length / lgKnRows.length) * 100).toFixed(1);
+    statBVal.textContent = `${lgEnRate}% vs ${lgKnRate}%`;
+    statBSub.textContent = `English vs Kanglish flag rate`;
+  } else {
+    statBVal.textContent = 'running';
+    statBSub.textContent = 'Awaiting Llama Guard baseline';
+  }
+
+  // (c) Gated steering's harmful refusal vs harmless wrong-refusal for Gemma
+  const gemmaHarm = data.filter(r => r.model.toLowerCase().includes('gemma') && r.condition === 'steer_gated' && r.split === 'harmful');
+  const gemmaSafe = data.filter(r => r.model.toLowerCase().includes('gemma') && r.condition === 'steer_gated' && r.split === 'harmless');
+
+  const statCVal = document.getElementById('hero-stat-c-val');
+  const statCSub = document.getElementById('hero-stat-c-sub');
+  if (gemmaHarm.length && gemmaSafe.length) {
+    const gHarmRate = ((gemmaHarm.filter(r => parseInt(r.refused, 10) === 1).length / gemmaHarm.length) * 100).toFixed(1);
+    const gSafeRate = ((gemmaSafe.filter(r => parseInt(r.refused, 10) === 1).length / gemmaSafe.length) * 100).toFixed(1);
+    statCVal.textContent = `${gHarmRate}% / ${gSafeRate}%`;
+    statCSub.textContent = `Harmful refusal vs harmless wrong-refusal`;
+  } else {
+    statCVal.textContent = 'running';
+    statCSub.textContent = 'Awaiting Gemma gated steering runs';
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// RENDER ALL VIEWS
 // ═══════════════════════════════════════════════════════════════════
 function render() {
   clearLoadingSpinners();
   const f = getFilters();
   const filtered = applyFilters(allData, f);
 
+  updateHeroLiveStats(allData);
   renderKannadaGapTiles(allData, f);
   renderGap(filtered);
   renderSteering(filtered);
@@ -1072,47 +1610,38 @@ function renderKannadaGapTiles(data, filters) {
   );
 
   const groups = getTheGapGroups(harmful);
-  let targetGroups = groups;
-  if (filters.model !== 'all') {
-    targetGroups = groups.filter(g => formatModelName(g.id) === filters.model || g.id === filters.model);
-  }
-
-  if (!targetGroups.length) {
-    container.innerHTML = '<div class="state" style="grid-column:1/-1;min-height:90px">No harmful prompts found.</div>';
-    return;
-  }
-
-  const knVariants = ['kn', 'kn_latn', 'kn_mix'];
   let html = '';
 
-  targetGroups.forEach(g => {
-    const gRows = harmful.filter(r => {
+  groups.forEach(g => {
+    if (filters.model !== 'all' && g.name !== filters.model) return;
+
+    const baseRows = harmful.filter(r => {
       if (g.isBaseline) {
         return r.model.toLowerCase().includes('llama-guard') && r.condition === 'baseline';
       }
       return r.model === g.id && r.condition === 'none';
     });
 
-    const enRows = gRows.filter(r => r.variant === 'en');
-    const enRef = enRows.filter(r => isTargetPositive(r, true)).length;
-    const enCI = wilsonCI(enRef, enRows.length);
+    const enRows = baseRows.filter(r => r.variant === 'en');
+    const enK = enRows.filter(r => isTargetPositive(r, true)).length;
+    const enCI = wilsonCI(enK, enRows.length);
 
-    let lowestVar = null;
+    const knVariants = ['kn', 'kn_latn', 'kn_mix'];
     let lowestCI = null;
+    let lowestVar = null;
 
     knVariants.forEach(v => {
-      const vRows = gRows.filter(r => r.variant === v);
-      if (vRows.length > 0) {
-        const vRef = vRows.filter(r => isTargetPositive(r, true)).length;
-        const ci = wilsonCI(vRef, vRows.length);
-        if (lowestCI === null || ci.p < lowestCI.p) {
-          lowestCI = ci;
-          lowestVar = v;
-        }
+      const vRows = baseRows.filter(r => r.variant === v);
+      if (!vRows.length) return;
+      const vK = vRows.filter(r => isTargetPositive(r, true)).length;
+      const ci = wilsonCI(vK, vRows.length);
+      if (!lowestCI || ci.p < lowestCI.p) {
+        lowestCI = ci;
+        lowestVar = v;
       }
     });
 
-    if (enRows.length === 0 || lowestCI === null) return;
+    if (!enRows.length || !lowestCI) return;
 
     const gap = +(enCI.p - lowestCI.p).toFixed(1);
 
@@ -1143,7 +1672,6 @@ function renderKannadaGapTiles(data, filters) {
   container.innerHTML = html || '<div class="state" style="grid-column:1/-1;min-height:90px">No gap data available.</div>';
 }
 
-// Helper to define bar groups for View 1 (Open models at none + Llama Guard baseline)
 function getTheGapGroups(data) {
   const groups = [];
 
@@ -1203,205 +1731,198 @@ function renderGap(data) {
 
     return {
       label: v,
-      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
+      data: ciArray.map(ci => ci.p),
       ciData: ciArray,
-      showN: true,
-      backgroundColor: PALETTE[v], // flat color
-      borderWidth: 0,             // no borders
-      borderRadius: 2,            // 2px corner radius
+      backgroundColor: PALETTE[v],
+      borderWidth: 0,
+      borderRadius: 2,
     };
   });
 
-  const yTitle = currentMetric === 'harmful_compliance'
-    ? 'Harmful compliance rate (%) [lower is safer]'
-    : 'Refusal rate (%) [higher is safer]';
-
-  buildChart('chart-gap', 'bar', {labels: groups.map(g => g.name), datasets}, {
-    showNUnderBars: true,
-    layout: { padding: { bottom: 14 } },
-    scales: {
-      y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: yTitle, color: '#6B6658', font: { size: 12, family: "'Inter', sans-serif" } } },
-      x: { title: { display: true, text: 'Model Group', color: '#6B6658', font: { size: 12, family: "'Inter', sans-serif" } }, ticks: { padding: 18 } },
+  buildChart('chart-gap', 'bar',
+    {
+      labels: groups.map(g => g.name),
+      datasets,
     },
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, padding: 14, color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 } } },
-      tooltip: {
-        callbacks: {
-          label: c => {
-            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
-            if (ci && ci.n > 0) {
-              return ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n}, k=${ci.k})`;
-            }
-            return ` ${c.dataset.label}: ${c.parsed.y}%`;
-          }
-        }
+    {
+      showNUnderBars: true,
+      scales: {
+        y: {
+          min: 0, max: 100,
+          title: {
+            display: true,
+            text: currentMetric === 'harmful_compliance' ? 'Harmful Compliance (%) [Jailbreak rate]' : 'Harmful Refusal Rate (%) [Higher is safer]',
+            color: '#6B6658',
+            font: { size: 12 }
+          },
+          ticks: { callback: v => v + '%' }
+        },
+        x: { ticks: { padding: 18 } }
       },
-    },
-  });
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const ci = c.dataset.ciData[c.dataIndex];
+              const metricLabel = currentMetric === 'harmful_compliance' ? 'Complied' : 'Refused';
+              return ` ${c.dataset.label}: ${ci.p}% (${metricLabel}: ${ci.k}/${ci.n}) [95% CI: ${ci.low}–${ci.high}%]`;
+            }
+          }
+        }
+      }
+    }
+  );
 }
 
-// ── VIEW 2: STEERING EVALUATION ───────────────────────────────────
+// ── VIEW 2: STEERING EVALUATION (HARMFUL VS HARMLESS) ─────────────
 function renderSteering(data) {
-  const models = [...new Set(data.map(r => formatModelName(r.model)))].sort();
-  const harmful = data.filter(r => r.split === 'harmful');
-  const harmless = data.filter(r => r.split === 'harmless');
+  const models = [...new Set(data.map(r => formatModelName(r.model)).filter(Boolean))].sort();
 
-  // 2A: Harmful Prompts
-  const harmfulDatasets = CONDITIONS.map(cond => {
-    const ciArray = models.map(m => {
-      const rows = harmful.filter(r => formatModelName(r.model) === m && r.condition === cond);
-      const k = rows.filter(r => isTargetPositive(r, true)).length;
-      return wilsonCI(k, rows.length);
-    });
-
-    return {
-      label: COND_LABELS[cond],
-      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
-      ciData: ciArray,
-      showN: true,
-      backgroundColor: PALETTE[cond],
-      borderWidth: 0,
-      borderRadius: 2,
-    };
-  });
-
-  const harmYTitle = currentMetric === 'harmful_compliance' ? 'Harmful compliance (%)' : 'Harmful refusal (%)';
-
-  buildChart('chart-steering-harmful', 'bar', {labels: models, datasets: harmfulDatasets}, {
-    showNUnderBars: true,
-    layout: { padding: { bottom: 12 } },
-    scales: {
-      y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: harmYTitle, color: '#6B6658', font: { size: 12 } } },
-      x: { ticks: { padding: 18 } }
-    },
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, padding: 12, color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 } } },
-      tooltip: {
-        callbacks: {
-          label: c => {
-            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
-            return ci && ci.n > 0 ? ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n})` : ` ${c.dataset.label}: ${c.parsed.y}%`;
-          }
+  function makeSteeringDataset(splitName, isHarmful) {
+    return CONDITIONS.map(cond => {
+      const ciArray = models.map(m => {
+        let rows = [];
+        if (cond === 'baseline') {
+          rows = data.filter(r =>
+            r.split === splitName &&
+            r.condition === 'baseline' &&
+            r.model.toLowerCase().includes('llama-guard')
+          );
+        } else {
+          rows = data.filter(r =>
+            r.split === splitName &&
+            r.condition === cond &&
+            formatModelName(r.model) === m
+          );
         }
-      }
-    }
-  });
+        const k = rows.filter(r => isTargetPositive(r, isHarmful)).length;
+        return wilsonCI(k, rows.length);
+      });
 
-  // 2B: Harmless Prompts
-  const harmlessDatasets = CONDITIONS.map(cond => {
-    const ciArray = models.map(m => {
-      const rows = harmless.filter(r => formatModelName(r.model) === m && r.condition === cond);
-      const k = rows.filter(r => parseInt(r.refused, 10) === 1).length;
-      return wilsonCI(k, rows.length);
+      return {
+        label: COND_LABELS[cond],
+        data: ciArray.map(ci => ci.p),
+        ciData: ciArray,
+        backgroundColor: PALETTE[cond],
+        borderWidth: 0,
+        borderRadius: 2,
+      };
     });
-
-    return {
-      label: COND_LABELS[cond],
-      data: ciArray.map(ci => ci.n > 0 ? ci.p : null),
-      ciData: ciArray,
-      showN: true,
-      backgroundColor: PALETTE[cond],
-      borderWidth: 0,
-      borderRadius: 2,
-    };
-  });
-
-  buildChart('chart-steering-harmless', 'bar', {labels: models, datasets: harmlessDatasets}, {
-    showNUnderBars: true,
-    layout: { padding: { bottom: 12 } },
-    scales: {
-      y: { min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Harmless wrong-refusal (%)', color: '#6B6658', font: { size: 12 } } },
-      x: { ticks: { padding: 18 } }
-    },
-    plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, padding: 12, color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 } } },
-      tooltip: {
-        callbacks: {
-          label: c => {
-            const ci = c.dataset.ciData && c.dataset.ciData[c.dataIndex];
-            return ci && ci.n > 0 ? ` ${c.dataset.label}: ${c.parsed.y}% [95% CI: ${ci.low}%–${ci.high}%] (n=${ci.n})` : ` ${c.dataset.label}: ${c.parsed.y}%`;
-          }
-        }
-      }
-    }
-  });
-}
-
-// ── VIEW 2.5: RESPONSE CLASSIFICATION BREAKDOWN (STACKED BARS) ────
-function renderLabelBreakdown(data) {
-  const wrap = document.getElementById('wrap-label-breakdown');
-  const harmful = data.filter(r => r.split === 'harmful');
-
-  const hasLabel = harmful.some(r => r.label !== undefined && r.label !== null && r.label !== '');
-
-  if (!hasLabel) {
-    if (charts['chart-label-breakdown']) {
-      charts['chart-label-breakdown'].destroy();
-      delete charts['chart-label-breakdown'];
-    }
-    wrap.innerHTML = `
-      <div class="state" style="height:240px;color:var(--muted);">
-        <span>ℹ️ Response classification breakdown requires the <code>label</code> column (<code>refused</code> / <code>not_understood</code> / <code>complied</code>) currently being generated by Mac 1. The dashboard will automatically populate this chart once available in the CSVs.</span>
-      </div>
-      <canvas id="chart-label-breakdown" style="display:none"></canvas>
-    `;
-    return;
   }
 
-  wrap.innerHTML = '<canvas id="chart-label-breakdown"></canvas>';
+  // Harmful split
+  buildChart('chart-steering-harmful', 'bar',
+    {
+      labels: models,
+      datasets: makeSteeringDataset('harmful', true),
+    },
+    {
+      scales: {
+        y: {
+          min: 0, max: 100,
+          title: { display: true, text: currentMetric === 'harmful_compliance' ? 'Compliance (%)' : 'Refusal Rate (%)', color: '#6B6658', font: { size: 12 } },
+          ticks: { callback: v => v + '%' }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const ci = c.dataset.ciData[c.dataIndex];
+              return ` ${c.dataset.label}: ${ci.p}% (${ci.k}/${ci.n}) [95% CI: ${ci.low}–${ci.high}%]`;
+            }
+          }
+        }
+      }
+    }
+  );
 
-  const breakdownData = VARIANTS.map(v => {
-    const vRows = harmful.filter(r => r.variant === v);
-    const n = vRows.length;
-    if (n === 0) return { refused: 0, not_understood: 0, complied: 0, n: 0 };
-    const refCount  = vRows.filter(r => r.label === 'refused').length;
-    const notCount  = vRows.filter(r => r.label === 'not_understood').length;
-    const compCount = vRows.filter(r => r.label === 'complied').length;
+  // Harmless split
+  buildChart('chart-steering-harmless', 'bar',
+    {
+      labels: models,
+      datasets: makeSteeringDataset('harmless', false),
+    },
+    {
+      scales: {
+        y: {
+          min: 0, max: 100,
+          title: { display: true, text: 'Over-Refusal Rate (%)', color: '#6B6658', font: { size: 12 } },
+          ticks: { callback: v => v + '%' }
+        }
+      },
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: c => {
+              const ci = c.dataset.ciData[c.dataIndex];
+              return ` ${c.dataset.label}: ${ci.p}% (${ci.k}/${ci.n}) [95% CI: ${ci.low}–${ci.high}%]`;
+            }
+          }
+        }
+      }
+    }
+  );
+}
+
+// ── VIEW 2.5: RESPONSE CLASSIFICATION BREAKDOWN ───────────────────
+function renderLabelBreakdown(data) {
+  const card = document.getElementById('card-label-breakdown');
+  const hasLabel = data.some(r => r.label !== undefined && r.label !== null && r.label !== '');
+
+  if (!hasLabel) {
+    card.style.display = 'none';
+    return;
+  }
+  card.style.display = '';
+
+  const harmful = data.filter(r => r.split === 'harmful');
+  const catNames = ['refused', 'not_understood', 'complied'];
+  const catColors = {
+    refused:        '#5B6B3A', // --olive
+    not_understood: '#B8955A', // --ochre
+    complied:       '#7A1F2B', // --burgundy
+  };
+
+  const datasets = catNames.map(cat => {
+    const pctData = [];
+    const countData = [];
+    const totalData = [];
+
+    VARIANTS.forEach(v => {
+      const vRows = harmful.filter(r => r.variant === v);
+      const total = vRows.length;
+      const count = vRows.filter(r => (r.label || '').toLowerCase().trim() === cat).length;
+      pctData.push(total ? +(count / total * 100).toFixed(1) : 0);
+      countData.push(count);
+      totalData.push(total);
+    });
+
     return {
-      refused: +(refCount / n * 100).toFixed(1),
-      not_understood: +(notCount / n * 100).toFixed(1),
-      complied: +(compCount / n * 100).toFixed(1),
-      refCount, notCount, compCount, n
+      label: cat,
+      data: pctData,
+      counts: countData,
+      totalN: totalData,
+      backgroundColor: catColors[cat],
+      borderWidth: 0,
+      borderRadius: 2,
     };
   });
 
-  const datasets = [
-    {
-      label: 'refused (safe refusal)',
-      data: breakdownData.map(d => d.refused),
-      backgroundColor: '#5B6B3A', // --olive
-      borderWidth: 0,
-      borderRadius: 2,
-      counts: breakdownData.map(d => d.refCount),
-      totalN: breakdownData.map(d => d.n),
-    },
-    {
-      label: 'not_understood (clarification/confusion)',
-      data: breakdownData.map(d => d.not_understood),
-      backgroundColor: '#B8955A', // --ochre
-      borderWidth: 0,
-      borderRadius: 2,
-      counts: breakdownData.map(d => d.notCount),
-      totalN: breakdownData.map(d => d.n),
-    },
-    {
-      label: 'complied (jailbreak success)',
-      data: breakdownData.map(d => d.complied),
-      backgroundColor: '#7A1F2B', // --burgundy
-      borderWidth: 0,
-      borderRadius: 2,
-      counts: breakdownData.map(d => d.compCount),
-      totalN: breakdownData.map(d => d.n),
-    }
-  ];
-
-  buildChart('chart-label-breakdown', 'bar', {labels: VARIANTS, datasets}, {
+  buildChart('chart-label-breakdown', 'bar', {
+    labels: VARIANTS,
+    datasets: datasets
+  }, {
     scales: {
-      x: { stacked: true, title: { display: true, text: 'Input Variant', color: '#6B6658', font: { size: 12 } } },
-      y: { stacked: true, min: 0, max: 100, ticks: { callback: v => v + '%' }, title: { display: true, text: 'Share of responses (%)', color: '#6B6658', font: { size: 12 } } }
+      x: { stacked: true },
+      y: {
+        stacked: true,
+        min: 0, max: 100,
+        title: { display: true, text: 'Percentage of Responses (%)', color: '#6B6658', font: { size: 12 } },
+        ticks: { callback: v => v + '%' }
+      }
     },
     plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, padding: 14, color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 } } },
       tooltip: {
         callbacks: {
           label: c => {
@@ -1514,7 +2035,7 @@ function renderGateTuning(sweeps, filters) {
       }
     },
     plugins: {
-      legend: { position: 'top', labels: { boxWidth: 12, padding: 14, color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 } } },
+      legend: { position: 'top', labels: { boxWidth: 12, padding: 14, color: '#6B6658', font: { size: 12 } } },
       tooltip: {
         callbacks: {
           label: ctx => {
@@ -1564,7 +2085,7 @@ function renderLatency(data) {
       datasets: [{
         label: 'Median latency (ms)',
         data: meds,
-        backgroundColor: COND_COLORS, // flat colors
+        backgroundColor: COND_COLORS,
         borderWidth: 0,
         borderRadius: 2,
       }],
@@ -1650,24 +2171,24 @@ function buildChart(id, type, data, options) {
       plugins: {
         legend: {
           labels: {
-            color: '#6B6658', // --muted
+            color: '#6B6658',
             boxWidth: 12,
             padding: 14,
-            font: { family: "'Inter', sans-serif", size: 12 }
+            font: { size: 12 }
           }
         },
         tooltip: {
-          backgroundColor: '#FBF8F1', // --surface
-          borderColor: '#E2DCCB',     // --border
+          backgroundColor: '#FBF8F1',
+          borderColor: '#E2DCCB',
           borderWidth: 1,
-          titleColor: '#2B2A24',       // --ink
-          bodyColor: '#6B6658',        // --muted
+          titleColor: '#2B2A24',
+          bodyColor: '#6B6658',
           padding: 10,
           cornerRadius: 4,
           displayColors: true,
           boxPadding: 4,
-          titleFont: { family: "'Fraunces', Georgia, serif", size: 13, weight: '700' },
-          bodyFont: { family: "'Inter', sans-serif", size: 12 },
+          titleFont: { family: "Georgia, 'Times New Roman', serif", size: 13, weight: '700' },
+          bodyFont: { size: 12 },
           ...options.plugins?.tooltip,
         },
         ...options.plugins,
@@ -1675,8 +2196,8 @@ function buildChart(id, type, data, options) {
       ...options,
       scales: Object.fromEntries(
         Object.entries(options.scales || {}).map(([k,v]) => [k, {
-          grid: { color: '#E7E1D2', lineWidth: 1 }, // --grid thin (1px)
-          ticks: { color: '#6B6658', font: { family: "'Inter', sans-serif", size: 12 }, ...v.ticks },
+          grid: { color: '#E7E1D2', lineWidth: 1 },
+          ticks: { color: '#6B6658', font: { size: 12 }, ...v.ticks },
           ...v
         }])
       ),
@@ -1735,6 +2256,213 @@ function median(arr) {
   const m = Math.floor(arr.length / 2);
   return arr.length % 2 ? arr[m] : (arr[m-1]+arr[m]) / 2;
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// HERO CANVAS ANIMATION (35 FLOATING ELEMENTS)
+// ═══════════════════════════════════════════════════════════════════
+(function initHeroCanvas() {
+  const canvas = document.getElementById('hero-canvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+
+  let width = 0, height = 0;
+  function resize() {
+    const parent = canvas.parentElement;
+    if (!parent) return;
+    const rect = parent.getBoundingClientRect();
+    width = canvas.width = rect.width;
+    height = canvas.height = rect.height;
+  }
+  window.addEventListener('resize', resize);
+  resize();
+
+  const WORDS = ['no', 'refuse', 'safe', 'guardrail', 'language', 'beda', 'illa', 'ಬೇಡ', 'ಇಲ್ಲ', 'ಭಾಷೆ'];
+
+  const NUM_ELEMENTS = 35;
+  const elements = [];
+
+  for (let i = 0; i < NUM_ELEMENTS; i++) {
+    elements.push({
+      x: Math.random() * (width || 1200),
+      y: Math.random() * (height || 700),
+      vx: (Math.random() - 0.5) * 0.22,
+      vy: (Math.random() - 0.5) * 0.22,
+      rot: Math.random() * Math.PI * 2,
+      vRot: (Math.random() - 0.5) * 0.003,
+      baseOpacity: 0.08 + Math.random() * 0.11, // 0.08 to 0.19
+      fadePhase: Math.random() * Math.PI * 2,
+      fadeSpeed: 0.008 + Math.random() * 0.015,
+      pFactor: 10 + Math.random() * 18,
+      color: (i % 3 === 0) ? '#5B6B3A' : '#2B2A24', // olive or dark text (no new colors)
+      isIcon: (i % 2 === 0),
+      iconType: (i % 4), // 0: closed padlock, 1: open padlock, 2: key, 3: shield
+      word: WORDS[i % WORDS.length],
+      scale: 0.85 + Math.random() * 0.35
+    });
+  }
+
+  let mouseX = 0, mouseY = 0;
+  let targetMouseX = 0, targetMouseY = 0;
+  window.addEventListener('mousemove', e => {
+    const cx = window.innerWidth / 2;
+    const cy = window.innerHeight / 2;
+    targetMouseX = (e.clientX - cx) / cx;
+    targetMouseY = (e.clientY - cy) / cy;
+  });
+
+  function drawPadlock(ctx, closed) {
+    ctx.beginPath();
+    // Body (rounded rect)
+    if (ctx.roundRect) {
+      ctx.roundRect(-9, -4, 18, 15, 3);
+    } else {
+      ctx.rect(-9, -4, 18, 15);
+    }
+    ctx.stroke();
+
+    // Shackle
+    ctx.beginPath();
+    if (closed) {
+      ctx.arc(0, -4, 5.5, Math.PI, 0);
+      ctx.lineTo(5.5, -4);
+      ctx.moveTo(-5.5, -4);
+      ctx.lineTo(-5.5, 0);
+    } else {
+      ctx.arc(-2, -7, 5.5, Math.PI * 0.9, 0.1);
+      ctx.lineTo(3.5, -4);
+    }
+    ctx.stroke();
+
+    // Keyhole
+    ctx.beginPath();
+    ctx.arc(0, 1.5, 1.5, 0, Math.PI * 2);
+    ctx.moveTo(0, 3);
+    ctx.lineTo(0, 6);
+    ctx.stroke();
+  }
+
+  function drawKey(ctx) {
+    // Key ring
+    ctx.beginPath();
+    ctx.arc(-7, 0, 5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Shaft
+    ctx.beginPath();
+    ctx.moveTo(-2, 0);
+    ctx.lineTo(11, 0);
+    // Teeth
+    ctx.moveTo(6, 0);
+    ctx.lineTo(6, 4);
+    ctx.moveTo(10, 0);
+    ctx.lineTo(10, 4);
+    ctx.stroke();
+  }
+
+  function drawShield(ctx) {
+    ctx.beginPath();
+    ctx.moveTo(-9, -10);
+    ctx.lineTo(9, -10);
+    ctx.lineTo(9, 0);
+    ctx.quadraticCurveTo(9, 10, 0, 14);
+    ctx.quadraticCurveTo(-9, 10, -9, 0);
+    ctx.closePath();
+    ctx.stroke();
+  }
+
+  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  function renderFrame() {
+    if (!width || !height) return;
+    ctx.clearRect(0, 0, width, height);
+
+    mouseX += (targetMouseX - mouseX) * 0.05;
+    mouseY += (targetMouseY - mouseY) * 0.05;
+
+    const centerX = width / 2;
+    const centerY = height / 2;
+    // Clear zone ellipse behind text
+    const rx = Math.min(width * 0.44, 460);
+    const ry = Math.min(height * 0.38, 250);
+
+    elements.forEach(el => {
+      const px = el.x + mouseX * el.pFactor;
+      const py = el.y + mouseY * el.pFactor;
+
+      // Distance to center to keep clear zone behind text
+      const normDist = Math.hypot((px - centerX) / rx, (py - centerY) / ry);
+      let clearZoneFactor = 1;
+      if (normDist < 1.0) {
+        clearZoneFactor = Math.pow(normDist, 2.5); // smoothly fades to 0 in center
+      }
+
+      const currentFade = el.baseOpacity * (0.85 + 0.15 * Math.sin(el.fadePhase));
+      const finalOpacity = currentFade * clearZoneFactor;
+
+      if (finalOpacity > 0.01) {
+        ctx.save();
+        ctx.translate(px, py);
+        ctx.rotate(el.rot);
+        ctx.scale(el.scale, el.scale);
+
+        ctx.globalAlpha = finalOpacity;
+        ctx.strokeStyle = el.color;
+        ctx.fillStyle = el.color;
+        ctx.lineWidth = 1.4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+
+        if (el.isIcon) {
+          if (el.iconType === 0) drawPadlock(ctx, true);
+          else if (el.iconType === 1) drawPadlock(ctx, false);
+          else if (el.iconType === 2) drawKey(ctx);
+          else drawShield(ctx);
+        } else {
+          ctx.font = '500 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(el.word, 0, 0);
+        }
+
+        ctx.restore();
+      }
+
+      if (!prefersReducedMotion) {
+        el.x += el.vx;
+        el.y += el.vy;
+        el.rot += el.vRot;
+        el.fadePhase += el.fadeSpeed;
+
+        if (el.x < -60) el.x = width + 60;
+        if (el.x > width + 60) el.x = -60;
+        if (el.y < -60) el.y = height + 60;
+        if (el.y > height + 60) el.y = -60;
+      }
+    });
+  }
+
+  let animId = null;
+
+  function loop() {
+    renderFrame();
+    animId = requestAnimationFrame(loop);
+  }
+
+  if (!prefersReducedMotion) {
+    animId = requestAnimationFrame(loop);
+  } else {
+    renderFrame();
+  }
+
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+      if (animId) cancelAnimationFrame(animId);
+      animId = null;
+    } else if (!prefersReducedMotion && !animId) {
+      animId = requestAnimationFrame(loop);
+    }
+  });
+})();
 </script>
 </body>
 </html>

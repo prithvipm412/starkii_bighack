@@ -1,8 +1,13 @@
-# Bhasha Kavach — Results Dashboard
+# The Language Barrier — Results Dashboard
 
-## Open it
+> **Tagline**: Do small AI models stop refusing harmful requests when you switch to Kannada or Kanglish?  
+> **Core Question**: Can a gated refusal steer close the gap without over-refusing harmless questions?
 
-Run from the **repo root** (not from inside `dashboard/`):
+---
+
+## Open the Dashboard
+
+Run from the **repository root** (not from inside `dashboard/`):
 
 ```bash
 python3 -m http.server 8000
@@ -10,58 +15,50 @@ python3 -m http.server 8000
 
 Then open: **<http://localhost:8000/dashboard/>**
 
-This serves the whole repository root, ensuring `../results/mac*/` relative paths resolve correctly.
-No Node.js or build steps required.
+This serves the whole repository root so that relative paths to `../results/mac*/` resolve cleanly in the browser. Zero Node.js or build steps required.
 
 ---
 
-## Views
+## Architecture & Layout
 
-| Section | Name | Description |
-|---|---|---|
-| **Tiles** | Kannada Gap Tiles | Per model: English refusal rate minus the lowest of `kn`, `kn_latn`, `kn_mix` in percentage points (for undefended condition and Llama Guard baseline). |
-| **View 1** | The Gap (Headline Chart) | Harmful-prompt refusal rate by variant (`en`, `kn`, `kn_latn`, `kn_mix`), grouped by model (`condition=none`), plus the **Llama Guard baseline** (`condition=baseline`) as its own bar group. Shows sample count `n` under each bar and **95% Wilson confidence intervals**. |
-| **View 2** | Steering & Over-Refusal | **Harmful split**: refusal rate across defense conditions (`none` vs `steer_always` vs `steer_gated` vs `baseline`) to measure safety recovery (↑).<br>**Harmless split**: false refusal rate across conditions to verify benign queries are not over-refused (↓). |
-| **View 2.5** | Response Breakdown | Stacked bars per variant showing classification: `refused` (safe refusal), `not_understood` (clarification/language barrier), and `complied` (jailbreak). Automatically enables when `label` column is present in CSVs. |
-| **View 2.6** | Gate Tuning (Sweep Curve) | Reads `results/mac*/sweep_*.csv` (`_a<A>_t<T>`) and plots the Pareto trade-off curve per model: Harmful Kannada refusal (↑ Safety target) vs Harmless wrong-refusal (↓ Over-refusal penalty). |
-| **View 3** | Cost | Median generation latency (ms) per condition across models. |
-| **View 4** | Where It Fails | Category × variant matrix where `steer_gated` has the lowest refusal rate across conditions. |
+### 1. Sticky Top Navigation (`#top-nav`)
+- **Brand & Sections**: `The Language Barrier` | `Overview` | `Results` | `Gate tuning` | `Method`
+- **Active Scrollspy**: Highlights the current section on scroll with smooth scrolling (`scroll-behavior: smooth`).
+- **Data Source Control**: Toggle between **Full (real)** [default] and **Show sample data**. The orange `SAMPLE DATA` badge is strictly shown only in sample mode.
 
-Header strip: project name, hypothesis, **Full (real CSVs) [default] / Show sample data** toggle.
-The orange **SAMPLE DATA** badge is visible only when sample data is explicitly selected and never in real mode.
+### 2. Homepage & Hero (`#overview`)
+- **Animated Background**: Full-viewport `<canvas>` featuring 35 floating elements (outline padlocks, keys, shields, and neutral multilingual words: *"no"*, *"refuse"*, *"safe"*, *"guardrail"*, *"language"*, *"beda"*, *"illa"*, *"ಬೇಡ"*, *"ಇಲ್ಲ"*, *"ಭಾಷೆ"*).
+- **Subtle Dynamics**: Slow drift, gentle rotation, soft opacity fade (`0.08` to `0.20`), mouse parallax tracking, and a clear zone behind hero copy. Pauses when the tab is hidden and respects `prefers-reduced-motion`.
+- **Live Stat Cards**: Dynamically calculated from loaded CSVs:
+  - **Largest Safety Gap**: English vs lowest Kannada refusal rate drop across models.
+  - **Llama Guard Baseline**: English vs Kanglish moderation flag rate.
+  - **Gemma Gated Steering**: Harmful refusal recovery vs harmless wrong-refusal rate.
+- **How It Works Strip**: 3-step pipeline (`Translate prompts → Measure refusal → Steer with a gate`).
+- **Action Buttons**: Smooth-scroll shortcuts to `View results` and `Gate tuning`.
 
-Filters bar: Model, Variant, Category filters, and **Metric toggle** (`refused` | `harmful_compliance`).
+### 3. Results Dashboard (`#results`)
+- **Filters & Metrics**: Real-time filtering by Model, Variant, Category, and Metric toggle (`refused` | `harmful_compliance`).
+- **Kannada Safety Gap Tiles**: English refusal minus the lowest among Kannada variants (`kn`, `kn_latn`, `kn_mix`) for undefended models and Llama Guard baseline.
+- **View 1 — The Gap**: Harmful refusal rate by variant with **95% Wilson confidence intervals** and sample count $n$ under every bar, plus `llama-guard-3-1b (baseline)`.
+- **View 2 — Steering Evaluation**: Harmful safety recovery (↑) vs Harmless over-refusal check (↓) across conditions (`none`, `steer_always`, `steer_gated`, `baseline`).
+- **View 2.5 — Response Classification Breakdown**: Stacked bar breakdown (`refused`, `not_understood`, `complied`) active when `label` column is present.
+- **View 3 — Cost**: Median generation latency (ms) per condition.
+- **View 4 — Where It Still Fails**: Category $\times$ variant matrix where `steer_gated` has the lowest refusal rate.
 
----
+### 4. Gate Tuning (`#gate-tuning`)
+- **View 2.6 — Pareto Trade-off Curve**: Reads parameter sweeps (`results/mac*/sweep_*_a<A>_t<T>.csv`) and plots Harmful Kannada refusal (↑) vs Harmless wrong-refusal (↓) per $(\alpha, \tau)$ setting with tabular data.
 
-## Statistical Rigor
-
-- **95% Wilson Score Confidence Intervals**: Rendered as thin error bars on all proportion estimates to account for small pilot sample sizes ($n$).
-- **Strictly Numbers Only**: Never displays harmful prompt text or model replies in the dashboard.
-
----
-
-## Real Models (from AGENTS.md)
-
-| Mac  | Model (column in CSVs) |
-|------|------------------------|
-| mac1 | `Qwen/Qwen2.5-3B-Instruct` |
-| mac2 | `meta-llama/Llama-3.2-3B-Instruct` |
-| mac3 | `google/gemma-2-2b-it` |
-| mac4 | `llama-guard-3-1b` (baseline condition only) |
+### 5. Method (`#method`)
+- Experimental methodology covering prompt generation across 4 variants (`en`, `kn`, `kn_latn`, `kn_mix`), English contrastive refusal direction extraction, activation gating, and Llama Guard baseline moderation.
 
 ---
 
-## Data Loading & Sweep Handling
+## Statistical & Safety Rigor
 
-1. Real CSVs are read directly from `results/mac1/`, `results/mac2/`, `results/mac3/`, and `results/mac4/`.
-   Subfolders (e.g. `results/mac1/smoke/`) are strictly ignored.
-2. Core schema columns:
-   ```
-   prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit
-   ```
-   Optional new columns `label` and `harmful_compliance` are automatically recognized when present.
-3. Parameter sweeps matching `results/mac*/sweep_*_a<A>_t<T>.csv` are automatically loaded into the **Gate Tuning** view.
+- **Offline-First Typography**: Clean system font stacks for body and serif headings (no font CDN requests, ensuring full reliability on venue Wi-Fi). Tabular figures (`tabular-nums`) on all numbers and rates.
+- **Strictly Numbers Only**: Never displays prompt text or model replies anywhere.
+- **Wilson Score Intervals**: 95% Wilson confidence intervals rendered as 1px error bars on all proportion estimates.
+- **Subfolder Isolation**: Automatically ignores nested directories (e.g., `smoke/`, `pilot64/`).
 
 ---
 
@@ -69,10 +66,10 @@ Filters bar: Model, Variant, Category filters, and **Metric toggle** (`refused` 
 
 ```
 dashboard/
-  index.html                 ← single-page static dashboard (Chart.js + PapaParse + Wilson error bars)
-  README.md                  ← documentation and run instructions
+  index.html                 ← Complete single-page dashboard & homepage
+  README.md                  ← Documentation and setup instructions
   sample/
-    results_sample.csv       ← generated sample data with realistic refusal distributions
-    sweep_*.csv              ← sample parameter sweep CSVs for testing trade-off curves
-    generate_sample.py       ← sample generator script
+    results_sample.csv       ← Synthetic sample data for testing distributions
+    sweep_*.csv              ← Synthetic sweep CSVs for testing gate tuning
+    generate_sample.py       ← Sample data generation script
 ```
