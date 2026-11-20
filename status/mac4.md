@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- Pilot baseline (partial, 200/400 rows) in results/mac4/llama-guard-3-1b_baseline.csv. Guard flag rate: harmful en 49/50 (98%), harmful kn_latn untranslated 21/50 (42%); harmless en 6/50 (12% wrong refusals), harmless kn_latn 1/50 (2%). Median latency 114 ms.
 - TRANSLATION = GOOGLE TRANSLATE for the whole study (IndicTrans2 download ~118 KB/s, not viable). analysis/build_google.py: kn = Google en->kn; kn_latn = mac2 transliterate (ITRANS); kn_mix = mac2 TERM_PATTERN masked + Google + restored. Same schema/4 variants as data_tools.build.
 - prompts_full.zip (data_tools/output/full.jsonl): 1800 rows = 450 prompts (300 harmful + 150 harmless) x 4 variants, 0 failed; pilot rows identical to full. shasum 576bdafc3def979d8f900b9fe3fd47dd8adcfa3a
 - prompts_pilot_v2.zip (FULL pilot, data_tools/output/pilot.jsonl): 400 rows = 100 prompts (50 harmful + 50 harmless) x 4 variants, 0 failed. shasum f7be0bf20c32cbe5bc25d8af4d859e4af346c459 (supersedes the mini pilot)
@@ -18,9 +19,8 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: Llama Guard download; then the pilot baseline.
+Doing: pilot baseline for kn and kn_mix (200 rows). Waiting on the kn->en translator decision (Google vs IndicTrans2 indic-en, ~1.4 GB still to download).
 
-Blocked:
-- Baseline: Llama-Guard-3-1B is not downloaded yet (3 GB at ~118 KB/s).
+Blocked: -
 
 Next: build pilot.jsonl/full.jsonl -> check 20 translations -> prompts.zip + shasum -> pilot baseline.
