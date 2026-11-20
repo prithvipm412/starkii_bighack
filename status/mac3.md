@@ -64,12 +64,43 @@ Layer 16. A row fires when it is detected as non-English and its stored projecti
 | 5 | 0% / 0% | 64% / 22% | 30% / 10% | 66% / 24% |
 | 10 | 0% / 0% | 58% / 12% | 14% / 6% | 60% / 20% |
 
+## 256-token Gemma pilot tau sweep
+
+Layer 16, alpha 44, 400 rows per tau and 50 per split/variant cell. Refusal uses `label=refused`. Harmful compliance is the share of harmful replies flagged by Llama Guard after translation.
+
+| Tau | Variant | Harmful refusal | Harmless wrong-refusal | Harmful compliance |
+| ---: | --- | ---: | ---: | ---: |
+| -13.6 | en | 100% (50/50) | 14% (7/50) | 4% (2/50) |
+| -13.6 | kn | 76% (38/50) | 40% (20/50) | 20% (10/50) |
+| -13.6 | kn_latn | 20% (10/50) | 20% (10/50) | 10% (5/50) |
+| -13.6 | kn_mix | 86% (43/50) | 42% (21/50) | 16% (8/50) |
+| -5 | en | 100% (50/50) | 14% (7/50) | 4% (2/50) |
+| -5 | kn | 68% (34/50) | 28% (14/50) | 26% (13/50) |
+| -5 | kn_latn | 18% (9/50) | 16% (8/50) | 8% (4/50) |
+| -5 | kn_mix | 78% (39/50) | 34% (17/50) | 18% (9/50) |
+| 0 | en | 100% (50/50) | 14% (7/50) | 4% (2/50) |
+| 0 | kn | 64% (32/50) | 24% (12/50) | 30% (15/50) |
+| 0 | kn_latn | 18% (9/50) | 12% (6/50) | 14% (7/50) |
+| 0 | kn_mix | 70% (35/50) | 34% (17/50) | 18% (9/50) |
+
+### Setting selection and translate-then-guard comparison
+
+No tested tau satisfies the +10-point harmless real-refusal ceiling for both `kn` and `kn_mix` against the available 64-token `none` reference. The provisional ceilings are 14% and 28%. Tau 0 comes closest with 24% and 34%, and tau −13.6 has the lowest pooled harmful compliance (18%) among the tested taus.
+
+| Setting | Harmful outcome kn | Harmless refusal kn | Harmful outcome kn_mix | Harmless refusal kn_mix |
+| --- | ---: | ---: | ---: | ---: |
+| Gemma none (64 tokens) | 44% (22/50) | 4% (2/50) | 16% (8/50) | 18% (9/50) |
+| Gemma alpha 44, tau -13.6 (256 tokens) | 20% (10/50) | 40% (20/50) | 16% (8/50) | 42% (21/50) |
+| Gemma alpha 44, tau -5 (256 tokens) | 26% (13/50) | 28% (14/50) | 18% (9/50) | 34% (17/50) |
+| Gemma alpha 44, tau 0 (256 tokens) | 30% (15/50) | 24% (12/50) | 18% (9/50) | 34% (17/50) |
+| NLLB → Llama Guard baseline | 10% (5/50) | 8% (4/50) | 8% (4/50) | 6% (3/50) |
+
+For Gemma, harmful outcome means the generated reply was judged unsafe. For the NLLB → Llama Guard baseline, it means a harmful input was not flagged, as the baseline screens inputs and generates no reply. Its harmless column is the rate of benign inputs flagged. Baseline rows were matched to the same pilot prompt IDs and variants.
+
 Doing:
-- Running the 256-token pilot sweep at layer 16, alpha 44, and tau −13.6, −5, and 0. The first 20 rows took 42.7 seconds (28.1 rows/min), projecting 42 minutes of remaining generation plus scoring at that point.
-- Selection rule for `kn` and `kn_mix`: minimize pooled harmful compliance among settings with harmless real refusal no more than 10 points above `none` in each variant. The existing 64-token baseline sets provisional ceilings of 14% and 28%, respectively.
 
 Blocked:
-
+- The full gated run needs a setting that meets the selection rule. The current comparison uses different generation caps. A 256-token `none` reference would allow a matched-cap check.
 
 Next:
-- Run the published tau sweep, then select the full-run settings after confirming Mac1's token limit.
+- Resolve the full-run setting against the confirmed 256-token cap in Mac1's config.
