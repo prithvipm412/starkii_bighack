@@ -180,27 +180,27 @@ Harmful pass-through = prompt not flagged AND harmful_compliance = 1 (primary me
 |---|---|---|---|---|
 | en | none | 6.7 [4.4–10.1] (n=300) | 20.0 [14.4–27.1] (n=150) |  |
 | en | input_only | 0.0 [0.0–1.3] (n=300) | 22.0 [16.1–29.3] (n=150) |  |
-| en | steer_only | PENDING | PENDING |  |
-| en | input+steer | PENDING | PENDING |  |
+| en | steer_only | 6.3 [4.1–9.7] (n=300) | 20.0 [14.4–27.1] (n=150) |  |
+| en | input+steer | 0.0 [0.0–1.3] (n=300) | 22.0 [16.1–29.3] (n=150) |  |
 | kn | none | 65.3 [59.8–70.5] (n=300) | 4.0 [1.8–8.5] (n=150) |  |
 | kn | input_only | 2.7 [1.4–5.2] (n=300) | 8.7 [5.1–14.3] (n=150) |  |
-| kn | steer_only | PENDING | PENDING |  |
-| kn | input+steer | PENDING | PENDING |  |
+| kn | steer_only | 28.3 [23.5–33.7] (n=300) | 45.3 [37.6–53.3] (n=150) |  |
+| kn | input+steer | 0.7 [0.2–2.4] (n=300) | 46.7 [38.9–54.6] (n=150) |  |
 | kn_latn | none | 4.0 [2.3–6.9] (n=300) | 28.0 [21.4–35.7] (n=150) |  |
-| kn_latn | input_only | 0.3 [0.1–1.9] (n=300) | 31.3 [24.5–39.1] (n=150) | 100 / 350 |
-| kn_latn | steer_only | PENDING | PENDING |  |
-| kn_latn | input+steer | PENDING | PENDING | 0 / 0 |
+| kn_latn | input_only | 0.0 [0.0–1.3] (n=300) | 34.0 [26.9–41.9] (n=150) | 450 / 0 |
+| kn_latn | steer_only | 1.3 [0.5–3.4] (n=300) | 47.3 [39.5–55.3] (n=150) |  |
+| kn_latn | input+steer | 0.0 [0.0–1.3] (n=300) | 50.0 [42.1–57.9] (n=150) | 450 / 0 |
 | kn_mix | none | 46.7 [41.1–52.3] (n=300) | 12.0 [7.7–18.2] (n=150) |  |
 | kn_mix | input_only | 1.3 [0.5–3.4] (n=300) | 17.3 [12.1–24.2] (n=150) |  |
-| kn_mix | steer_only | PENDING | PENDING |  |
-| kn_mix | input+steer | PENDING | PENDING |  |
-| kn_latn_translit_rows | none | 0.0 [0.0–7.1] (n=50) | 30.0 [19.1–43.8] (n=50) |  |
-| kn_latn_translit_rows | input_only | 0.0 [0.0–7.1] (n=50) | 38.0 [25.9–51.8] (n=50) | 100 / 0 |
-| kn_latn_translit_rows | steer_only | PENDING | PENDING |  |
-| kn_latn_translit_rows | input+steer | PENDING | PENDING | 0 / 0 |
+| kn_mix | steer_only | 17.0 [13.2–21.7] (n=300) | 72.7 [65.0–79.2] (n=150) |  |
+| kn_mix | input+steer | 1.0 [0.3–2.9] (n=300) | 73.3 [65.7–79.8] (n=150) |  |
+| kn_latn_translit_rows | none | 4.0 [2.3–6.9] (n=300) | 28.0 [21.4–35.7] (n=150) |  |
+| kn_latn_translit_rows | input_only | 0.0 [0.0–1.3] (n=300) | 34.0 [26.9–41.9] (n=150) | 450 / 0 |
+| kn_latn_translit_rows | steer_only | 1.3 [0.5–3.4] (n=300) | 47.3 [39.5–55.3] (n=150) |  |
+| kn_latn_translit_rows | input+steer | 0.0 [0.0–1.3] (n=300) | 50.0 [42.1–57.9] (n=150) | 450 / 0 |
 
-- **kn_latn input flags:** the translit baseline covers only the 100 pilot kn_latn rows (50 harmful + 50 harmless). All other kn_latn rows use the untranslated baseline, so `kn_latn` mixes the two; `kn_latn_translit_rows` uses translit rows only.
+- **kn_latn input flags** come from the translit baseline (ITRANS → Kannada → NLLB → Llama Guard) for 450 kn_latn rows and from the untranslated baseline for 0. `kn_latn_translit_rows` restricts kn_latn to translit-covered rows.
 - **The output layer is not scored here.** Llama Guard is both the output filter and the study's judge (harmful_compliance), so scoring it with Llama Guard would be circular: it would block exactly what it counts as harmful. It is reported as a design layer, validated only by the human-labelled sample (`analysis/scorer_check.csv`).
 - `label` (refused / not_understood / complied) agrees with humans only ~33% (n = 30, Gemma), so the harmless-blocked rates, which use label = refused, carry that caveat. not_understood shares are never a headline.
-- PENDING cells: the steer_gated full-run CSVs (and other models) are still finishing; rerun `python -m analysis.combined` to refresh.
+- All listed cells are filled; models not shown have no main CSVs yet.
 <!-- layered-guard:end -->

@@ -185,18 +185,22 @@ def write_findings(out, run):
             lines.append(f"| {r['variant']} | {r['setting']} | {fmt(r, 'harmful_pass')} | "
                          f"{fmt(r, 'harmless_blocked')} | {src} |")
         lines.append("")
+    kl = [r for r in out if r["variant"] == "kn_latn" and r["setting"] == "input_only"]
+    tr_n = max((r["input_translit_n"] for r in kl), default=0)
+    un_n = max((r["input_untranslated_n"] for r in kl), default=0)
+    pending = any(r["status"] != "ok" for r in out)
     lines += [
-        "- **kn_latn input flags:** the translit baseline covers only the 100 pilot kn_latn rows (50 harmful + 50 harmless). "
-        "All other kn_latn rows use the untranslated baseline, so `kn_latn` mixes the two; "
-        "`kn_latn_translit_rows` uses translit rows only.",
+        f"- **kn_latn input flags** come from the translit baseline (ITRANS → Kannada → NLLB → Llama Guard) for "
+        f"{tr_n} kn_latn rows and from the untranslated baseline for {un_n}. "
+        "`kn_latn_translit_rows` restricts kn_latn to translit-covered rows.",
         "- **The output layer is not scored here.** Llama Guard is both the output filter and the study's judge "
         "(harmful_compliance), so scoring it with Llama Guard would be circular: it would block exactly what it "
         "counts as harmful. It is reported as a design layer, validated only by the human-labelled sample "
         "(`analysis/scorer_check.csv`).",
         "- `label` (refused / not_understood / complied) agrees with humans only ~33% (n = 30, Gemma), so the "
         "harmless-blocked rates, which use label = refused, carry that caveat. not_understood shares are never a headline.",
-        "- PENDING cells: the steer_gated full-run CSVs (and other models) are still finishing; rerun "
-        "`python -m analysis.combined` to refresh.", END]
+        ("- PENDING cells: some model CSVs are still finishing; rerun `python -m analysis.combined` to refresh."
+         if pending else "- All listed cells are filled; models not shown have no main CSVs yet."), END]
     try:
         text = FINDINGS.read_text(encoding="utf-8")
     except OSError:

@@ -1,6 +1,7 @@
 # Mac4 status
 
 Done:
+- baseline_translit on the FULL set: 450/450 kn_latn rows (results/mac4/llama-guard-3-1b_baseline_translit.csv). combined.py now uses translit for all 450 kn_latn rows. Qwen steer_gated full has landed, so all 4 layered settings are filled for Qwen.
 - guard/cli.py (python -m guard.cli "text" [--reply ...] -> JSON verdict; exit 0 allow / 1 block / 2 error) and guard/server.py (stdlib, 127.0.0.1:8787, POST /check, GET /health, CORS *, 32 KB cap, no request text in logs). Tested: health, preflight 204, check, 400 / 413 / 404. Warm input latency via the server: en 114 ms, kn 289, kn_latn 379.
 - guard/README.md: layers, run commands, measured latency per layer, effect, limits.
 - guard/guard.py LanguageBarrierGuard: detect() (mac1's pipeline.data heuristics + Kannada/Latin word ratio), input_check (baseline + baseline_translit routing), output_check (pipeline/score.py format, >0.5), check(). Input layer matches the baseline CSVs on 40/40 pilot rows (20 harmful + 20 harmless), identical p_unsafe. detect on the full set: en 449/450, kn_latn 437/450, kn/kn_mix all to the translation path.
