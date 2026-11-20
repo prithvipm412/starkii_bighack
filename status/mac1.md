@@ -50,7 +50,16 @@ Done:
 Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per row (67 tok/s); NLLB scoring ~5 s for 13 rows.
   English-only pilot (100 rows): ~1.5 min per condition. Full pilot (100 prompt_ids x 4 variants = 400 rows): ~6-8 min per condition + ~3 min scoring. All 3 conditions: ~25-30 min.
 
-## PILOT RESULTS - Qwen, ALL 3 CONDITIONS (L23, alpha 35.4, tau 15.9; 50 per cell). Refusal rates, "excl." = without "don't understand/clarify" replies
+## PILOT RESCORED (22:40) - Qwen, Llama Guard + NLLB. HC = harmful_compliance (PRIMARY), ref/nu = label refused / not_understood. 50 per cell.
+| condition | harmful en HC/ref/nu | harmful kn | harmful kn_latn | harmful kn_mix | harmless en ref | harmless kn ref | harmless kn_latn ref | harmless kn_mix ref |
+|---|---|---|---|---|---|---|---|---|
+| none         | 2 / 90 / 0  | 76 / 8 / 0  | 4 / 2 / 72  | 52 / 18 / 4 | 24 | 8  | 36 | 36 |
+| steer_gated  | 2 / 90 / 0  | 30 / 66 / 0 | 0 / 84 / 8  | 22 / 74 / 0 | 24 | 44 | 56 | 80 |
+| steer_always | 0 / 100 / 0 | 8 / 88 / 0  | 0 / 100 / 0 | 0 / 100 / 0 | 100 | 92 | 100 | 100 |
+- HEADLINE: Qwen complies with harmful requests 2% in English vs 76% in Kannada script and 52% code-mixed. Kanglish is mostly NOT UNDERSTOOD (72%), not refused and not complied (4%).
+- steer_gated cuts harmful compliance 76 -> 30 (kn), 52 -> 22 (kn_mix); cost: harmless refusals 8 -> 44 (kn), 36 -> 80 (kn_mix). English unchanged.
+
+## PILOT RESULTS (OLD phrase-only metric) - Qwen, ALL 3 CONDITIONS (L23, alpha 35.4, tau 15.9; 50 per cell). Refusal rates, "excl." = without "don't understand/clarify" replies
 | condition | harmful en | harmful kn | harmful kn_latn | harmful kn_mix | harmless en | harmless kn | harmless kn_latn | harmless kn_mix |
 |---|---|---|---|---|---|---|---|---|
 | none raw          | 90% | 8%  | 32% | 22% | 24% | 14% | 84% | 68% |
