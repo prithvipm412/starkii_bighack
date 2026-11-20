@@ -14,6 +14,8 @@ git pull --rebase
 uv venv -p 3.12 .venv && uv pip install -r requirements.txt     # or python3.12 -m venv .venv && .venv/bin/pip install -r requirements.txt
 source .venv/bin/activate
 hf auth login        # Llama / Gemma / Llama Guard / IndicTrans2 are gated: accept each licence on huggingface.co first
+# fallback translator (ungated, 2.5 GB). HF_HUB_DISABLE_XET=1 avoids the Xet "error decoding response body"; rerun if the connection drops, it resumes:
+HF_HUB_DISABLE_XET=1 python -c "from huggingface_hub import snapshot_download as s; s('facebook/nllb-200-distilled-600M', allow_patterns=['pytorch_model.bin','*.json','*.model'])"
 mkdir -p logs
 # CFG = mac1_qwen | mac2_llama | mac3_gemma
 python -m pipeline.extract_direction --config configs/CFG.yaml            # reads data_tools/output/direction.jsonl
@@ -32,7 +34,8 @@ Done:
 - Projection at layer 23: English harmful ~42, English harmless 3-10, Kannada harmful ~15. Supports the "weak activation" hypothesis; motivated the tau change above.
 - mac1 .venv rebuilt on Python 3.12.16 from requirements.txt; smoke loop re-run on it, same refusals as before, ~85 tok/s.
 - P2: Qwen direction extracted from direction.jsonl (64 harmful + 64 harmless English): layer 23 of 36 (best separation in the middle third 12-23, Cohen's d 7.55), alpha 35.4, tau 15.9. results/mac1/Qwen2.5-3B-Instruct_direction.json. Separation keeps rising after layer 23 (about 10 at 26 and 35), so the layer sweep should include values beyond the middle third.
-- TIP: models already downloaded -> prefix runs with HF_HUB_OFFLINE=1 to skip HF network checks (they timed out here).
+- TIP: models already downloaded -> prefix runs with HF_HUB_OFFLINE=1 to skip HF network checks (they timed out here). NEEDS THE PIPELINE FROM a later commit than 549b5b5: transformers 4.57.3 calls the Hub when a tokenizer is loaded by repo id even offline; pipeline now loads the local cached snapshot when HF_HUB_OFFLINE=1. Verified offline: Qwen generate + NLLB translate.
+- Scorer translator: IndicTrans2 if accessible, ELSE facebook/nllb-200-distilled-600M (ungated). The log line "[score] translator: ..." says which one ran. mac1 uses NLLB (IndicTrans2 still gated).
 Doing:
 - Waiting for data_tools/output/pilot.jsonl, then --conditions none.
 Blocked:

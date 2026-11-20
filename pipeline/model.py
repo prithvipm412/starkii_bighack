@@ -1,5 +1,6 @@
 """Load a chat model from a YAML config; chat-template + greedy batched generation."""
 import gc
+import os
 import random
 import time
 
@@ -11,6 +12,19 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 DTYPES = {"float16": torch.float16, "bfloat16": torch.bfloat16, "float32": torch.float32}
 DEFAULTS = {"device": "mps", "dtype": "float16", "attn_implementation": "sdpa", "seed": 0,
             "max_new_tokens": 64, "batch_size": 8, "layer": None, "alpha": None, "tau": None}
+
+
+def resolve(repo_id):
+    """With HF_HUB_OFFLINE=1, return the local cached snapshot folder instead of the repo id.
+    transformers 4.57.3 calls the Hub API (model_info) when a tokenizer is loaded by repo id, even
+    offline; a local folder skips that. Online, the repo id is returned unchanged."""
+    if os.environ.get("HF_HUB_OFFLINE", "").lower() not in ("1", "true", "yes", "on"):
+        return repo_id
+    try:
+        from huggingface_hub import snapshot_download
+        return snapshot_download(repo_id, local_files_only=True)
+    except Exception:
+        return repo_id  # not cached: let the normal load raise a clear error
 
 
 def load_config(path):
@@ -38,13 +52,14 @@ def pick_device(want):
 def load_model(cfg):
     set_seed(cfg["seed"])
     device = pick_device(cfg["device"])
-    tok = AutoTokenizer.from_pretrained(cfg["model_id"])
+    src = resolve(cfg["model_id"])
+    tok = AutoTokenizer.from_pretrained(src)
     tok.padding_side = "left"
     if tok.pad_token is None:
         tok.pad_token = tok.eos_token
     t0 = time.time()
     model = AutoModelForCausalLM.from_pretrained(
-        cfg["model_id"], dtype=DTYPES[cfg["dtype"]], attn_implementation=cfg["attn_implementation"])
+        src, dtype=DTYPES[cfg["dtype"]], attn_implementation=cfg["attn_implementation"])
     model.to(device).eval()
     print(f"[model] loaded {cfg['model_id']} on {device} ({cfg['dtype']}) in {time.time() - t0:.0f}s")
     return model, tok
