@@ -3,7 +3,7 @@ import json
 from pathlib import Path
 
 
-TEXT_FIELDS = ("prompt", "prompt_text", "text", "question", "instruction", "input")
+TEXT_FIELDS = ("text", "prompt", "prompt_text", "question", "instruction", "input")
 
 
 def read_jsonl(path):
