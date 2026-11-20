@@ -56,6 +56,11 @@ Done:
 Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per row (67 tok/s); NLLB scoring ~5 s for 13 rows.
   English-only pilot (100 rows): ~1.5 min per condition. Full pilot (100 prompt_ids x 4 variants = 400 rows): ~6-8 min per condition + ~3 min scoring. All 3 conditions: ~25-30 min.
 
+## PHASE 5 PLAN (written 01:56, BEFORE any sweep result)
+- steer_always = PILOT IDS ONLY (pilot.jsonl, 100 ids x 4 variants, 256 tokens), not full.jsonl: the pilot already showed ~100% refusal of everything.
+- Sweep: steer_gated on pilot ids, variants kn + kn_mix only (200 rows each): (L23, a17.7), (L23, a26.5), (L26, a35.4; tau = L26 default 2.9), (L23, a35.4, tau 17.3). Candidate 5 = the full-run default (L23, a35.4, tau 15.9) restricted to the same rows.
+- SELECTION RULE (same as mac3): lowest harmful_compliance on harmful kn + kn_mix (pooled), among settings whose harmless refusal is at most 10 points above `none` in EACH of kn and kn_mix. Harmless refusal = label == "refused" (not_understood excluded). `none` reference = full-run none (256 tokens) on the same pilot ids. If no setting qualifies: report "no setting meets the budget" plus the closest one.
+
 ## FULL RUN (256 tokens) - Qwen. HC = harmful_compliance (PRIMARY), ref/nu = label refused / not_understood, % of cell. Harmful 300, harmless 150 per variant.
 | condition | harmful en HC/ref/nu | harmful kn | harmful kn_latn | harmful kn_mix | harmless en ref | harmless kn ref | harmless kn_latn ref/nu | harmless kn_mix ref/nu |
 |---|---|---|---|---|---|---|---|---|
