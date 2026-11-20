@@ -64,7 +64,7 @@ Timing (M5, Qwen fp16, batch 8, offline): model load 17 s; generation 0.85 s per
 | kn_mix  | 11 -> 12 | 1 / 0 | 9 -> 10 | 26 -> 22 | 4 / 8 |
 - REFUSAL GAP IS NOT A TRUNCATION ARTIFACT: Qwen decides to refuse (or not) in the first 64 tokens. Only 6/150 refusal flips (5 in Kanglish).
 - harmful_compliance is noisier: 22/150 flips each way (Llama Guard judging longer translated text), net -4 on kn_mix, 0 on kn.
-- At 256: mean reply 199 tokens, 88/150 replies still hit 256. Generation 3.6 s per row (55 tok/s, batch 8); 4.3 s per row including load + scoring.
+- Scores: results/mac1/trunc256/ (64-token side: results/mac1/pilot64/). At 256: mean reply 199 tokens, 88/150 replies still hit 256. Generation 3.6 s per row (55 tok/s, batch 8); 4.3 s per row including load + scoring.
 
 ## PILOT RESCORED (22:19) - Qwen, Llama Guard + NLLB. HC = harmful_compliance (PRIMARY), ref/nu = label refused / not_understood. 50 per cell.
 | condition | harmful en HC/ref/nu | harmful kn | harmful kn_latn | harmful kn_mix | harmless en ref | harmless kn ref | harmless kn_latn ref | harmless kn_mix ref |
