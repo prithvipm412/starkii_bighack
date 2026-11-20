@@ -97,6 +97,30 @@ No tested tau satisfies the +10-point harmless real-refusal ceiling for both `kn
 
 For Gemma, harmful outcome means the generated reply was judged unsafe. For the NLLB → Llama Guard baseline, it means a harmful input was not flagged, as the baseline screens inputs and generates no reply. Its harmless column is the rate of benign inputs flagged. Baseline rows were matched to the same pilot prompt IDs and variants.
 
+## Full-run gate firing by threshold
+
+Computed from 1,800 unique layer-16 Gemma prompt/variant pairs. The full `none` and `steer_gated` gate CSVs agree on every stored projection and detected-language flag. Cells show harmful / harmless firing, with 300 harmful and 150 harmless prompts per variant. A row fires when its projection is strictly above tau and the existing detector marks it non-English. The detector marked one harmful `en` row non-English.
+
+| Tau | en | kn | kn_latn | kn_mix |
+| ---: | ---: | ---: | ---: | ---: |
+| -20 | 0.3% / 0.0% | 93.3% / 54.7% | 99.0% / 90.7% | 93.3% / 67.3% |
+| -13.6 | 0.3% / 0.0% | 86.7% / 44.0% | 95.3% / 86.0% | 88.3% / 47.3% |
+| -10 | 0.3% / 0.0% | 79.7% / 39.3% | 89.7% / 76.7% | 85.7% / 42.0% |
+| -8 | 0.3% / 0.0% | 78.7% / 35.3% | 86.7% / 68.0% | 84.0% / 39.3% |
+| -6 | 0.3% / 0.0% | 76.3% / 34.0% | 82.3% / 62.0% | 81.7% / 36.7% |
+| -5 | 0.3% / 0.0% | 75.7% / 34.0% | 79.3% / 57.3% | 80.7% / 35.3% |
+| -4 | 0.3% / 0.0% | 74.7% / 33.3% | 76.3% / 46.0% | 79.3% / 34.7% |
+| -3 | 0.3% / 0.0% | 74.3% / 33.3% | 70.7% / 40.7% | 77.7% / 34.7% |
+| -2 | 0.3% / 0.0% | 72.0% / 31.3% | 66.7% / 34.7% | 76.0% / 33.3% |
+| 0 | 0.3% / 0.0% | 70.7% / 30.7% | 56.3% / 27.3% | 73.7% / 31.3% |
+| 2 | 0.3% / 0.0% | 68.3% / 27.3% | 46.7% / 19.3% | 72.3% / 30.0% |
+| 5 | 0.3% / 0.0% | 64.7% / 24.7% | 31.3% / 13.3% | 69.3% / 23.3% |
+| 10 | 0.3% / 0.0% | 58.0% / 16.0% | 15.7% / 5.3% | 65.0% / 20.0% |
+
+**Proposal for Mac1.** At layer 16 and alpha 44, try tau **−4** for `kn_latn` and keep tau **0** for the other variants. Using 75% harmful firing as a working target, −4 retains 229/300 (76.3%) and fires on 69/150 harmless prompts (46.0%). Relative to the original −13.6 threshold, harmless firing drops 40.0 points while harmful firing drops 19.0 points. Relative to the current full-run tau 0, −4 raises harmful firing by 20.0 points and harmless firing by 18.7 points. Stricter thresholds than 0 cut harmless firing further and drive harmful firing below 56.3%. The stored projections do not show a threshold that both cuts harmless firing below the current full-run rate and retains high harmful firing.
+
+The pipeline accepts one scalar `--tau` per run. `--taus` sweeps scalar settings across separate runs. Mac1 would need a variant-keyed threshold override with the scalar fallback and the effective threshold logged per row. The 400-row pilot was not generated because per-variant thresholds are unsupported.
+
 Doing:
 
 Blocked:
