@@ -1,14 +1,16 @@
 # Mac3 status
 
 Done:
-- Installed the shared requirements on Python 3.12.16. Verified PyTorch 2.15.0 can allocate a tensor on MPS.
-- Confirmed access to the official `google/gemma-2-2b-it` checkpoint.
+- Installed the shared requirements on Python 3.12.16 with PyTorch 2.15.0.
+- Downloaded the official `google/gemma-2-2b-it` checkpoint. The final shard passed SHA-256 verification after a resumable HTTP transfer.
+- Gemma generated a coherent answer with finite logits on `mps:0` and `attn_implementation="eager"` in both `torch.float16` and `torch.bfloat16`. This was a single harmless smoke prompt per dtype. The current `configs/mac3_gemma.yaml` selects the verified bfloat16 setting.
+- Gemma's chat template rejects the `system` role. The smoke prompt used one `user` message.
 
 Doing:
-- Resuming the final Gemma weight shard over HTTP after the Xet transfer returned a response-decoding error.
+- Waiting for Mac1's pilot instructions and local pilot data. `direction.jsonl` has arrived.
 
 Blocked:
-- Pilot inputs `data_tools/output/direction.jsonl` and `data_tools/output/pilot.jsonl` have not arrived locally.
+- `data_tools/output/pilot.jsonl` has not arrived locally.
 
 Next:
-- Verify Gemma on MPS with eager attention, starting with float16 and retrying with bfloat16 if needed. Gemma's chat template requires a user-only test message because it rejects the system role.
+- Run the mac3 pilot when the inputs and instructions are ready.
