@@ -23,12 +23,15 @@ python -m pipeline.run --config configs/CFG.yaml --prompts data_tools/output/pil
 ```
 Options: `--limit N` (first N prompt_ids, all variants), `--layer L --alpha A --tau T` (override config/defaults).
 Sweep: `--layers 10,14,18 --alphas 4,8,12 --conditions steer_gated` -> results/macN/sweep_<model>_<cond>_L<L>_a<A>.csv (same schema).
-Defaults when config has null: layer = best Cohen's-d separation in the middle third; alpha = norm of the harmful-harmless mean difference at that layer; tau = midpoint of English harmful/harmless projections. See results/macN/<model>_direction.json.
+Defaults when config has null: layer = best Cohen's-d separation in the middle third; alpha = norm of the harmful-harmless mean difference at that layer; tau = mean + 2 sd of English HARMLESS projections (the English midpoint was too high: Kannada harmful prompts project far below English harmful ones). See results/macN/<model>_direction.json.
 
 Done:
 - requirements.txt (Python 3.12), configs/mac{1,2,3}_*.yaml, pipeline/{data,model,extract_direction,steer,score,run}.py, CLAUDE.md/AGENTS.md "Python 3.12" line.
+- MILESTONE: full loop on Qwen passed: 10 English prompts (5 harmful, 5 harmless) + kn/kn_latn/kn_mix of one harmful prompt, all 3 conditions, resume verified. CSVs in results/mac1/smoke/ (NOT real results; kept out of results/mac1/*.csv on purpose). ~75-90 tok/s on M5, batch 8.
+- Smoke numbers (32 direction prompts, layer 23/36, alpha 34.5, tau 12.4): none = 5/5 English harmful refused, 0/5 harmless refused, 0/3 Kannada variants refused. steer_always = 3/3 Kannada refused, but 4/5 harmless wrongly refused. steer_gated = 3/3 Kannada refused, 0/5 harmless refused, English untouched.
+- Projection at layer 23: English harmful ~42, English harmless 3-10, Kannada harmful ~15. Supports the "weak activation" hypothesis; motivated the tau change above.
 Doing:
-- Smoke test on Qwen (10 English prompts + kn/kn_latn/kn_mix of one prompt).
+- Waiting for data_tools/output/direction.jsonl + pilot.jsonl (Phase 2).
 Blocked:
 - No HF login on mac1: Llama Guard 3 1B and IndicTrans2 are gated, so judge_score is blank until `hf auth login`.
 Next:

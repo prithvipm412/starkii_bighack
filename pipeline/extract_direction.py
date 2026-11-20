@@ -65,13 +65,14 @@ def main():
     lo, hi = n_layers // 3, 2 * n_layers // 3
     best = lo + int(sep[lo:hi].argmax())
     layer = args.layer if args.layer is not None else best
-    tau = float((p_h[:, layer].mean() + p_s[:, layer].mean()) / 2)
+    tau = float(p_s[:, layer].mean() + 2 * p_s[:, layer].std())  # harmless mean + 2 sd: catches weak activations
 
     os.makedirs("outputs/directions", exist_ok=True)
     pt = f"outputs/directions/{cfg['name']}.pt"
     torch.save({"directions": dirs, "diff_norm": diff_norm, "separation": sep, "layer": layer,
                 "tau": tau, "alpha": float(diff_norm[layer]), "model_id": cfg["model_id"],
-                "mean_proj_harmful": p_h.mean(0), "mean_proj_harmless": p_s.mean(0)}, pt)
+                "mean_proj_harmful": p_h.mean(0), "mean_proj_harmless": p_s.mean(0),
+                "std_proj_harmless": p_s.std(0)}, pt)
 
     out_dir = f"results/{cfg['machine']}"
     os.makedirs(out_dir, exist_ok=True)
@@ -82,7 +83,8 @@ def main():
         "per_layer": [{"layer": l, "separation": round(float(sep[l]), 4),
                        "diff_norm": round(float(diff_norm[l]), 4),
                        "mean_proj_harmful": round(float(p_h[:, l].mean()), 4),
-                       "mean_proj_harmless": round(float(p_s[:, l].mean()), 4)} for l in range(n_layers)],
+                       "mean_proj_harmless": round(float(p_s[:, l].mean()), 4),
+                       "std_proj_harmless": round(float(p_s[:, l].std()), 4)} for l in range(n_layers)],
     }
     js = f"{out_dir}/{cfg['name']}_direction.json"
     with open(js, "w") as f:

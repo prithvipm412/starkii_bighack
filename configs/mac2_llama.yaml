@@ -11,7 +11,7 @@ batch_size: 8
 # Steering. null = take the default from outputs/directions/<name>.pt (written by extract_direction):
 #   layer: best-separation layer in the middle third
 #   alpha: norm of the (unnormalised) harmful-minus-harmless mean difference at that layer
-#   tau:   midpoint of mean English harmful / harmless projections at that layer
+#   tau:   mean + 2 sd of English harmless projections at that layer
 layer: null
 alpha: null
 tau: null

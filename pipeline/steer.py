@@ -27,8 +27,8 @@ def load_direction(cfg, layer=None, alpha=None, tau=None):
     a = alpha if alpha is not None else cfg.get("alpha")
     a = float(blob["diff_norm"][L]) if a is None else float(a)
     t = tau if tau is not None else cfg.get("tau")
-    if t is None:  # midpoint at this layer (recomputed so a different L gets its own tau)
-        t = float((blob["mean_proj_harmful"][L] + blob["mean_proj_harmless"][L]) / 2)
+    if t is None:  # English harmless mean + 2 sd at this layer (recomputed so a different L gets its own tau)
+        t = float(blob["mean_proj_harmless"][L] + 2 * blob["std_proj_harmless"][L])
     return blob["directions"][L].clone(), L, a, float(t)
 
 
