@@ -5,11 +5,16 @@ Outputs (gitignored, under data_tools/output/raw/):
   raw/en_full.jsonl              ~300 harmful + 150 harmless (evaluation)
   raw/en_pilot.jsonl             50 harmful + 50 harmless, subset of full, category-balanced
   raw/en_direction.jsonl         64 harmful + 64 harmless, disjoint from full (never evaluated)
+  raw/id_map.csv                 prompt_id -> source id (no text)
+  direction.jsonl                copy of en_direction (English only; not passed through data_tools.build)
 
-Record format (one JSON object per line):
-  {"prompt_id", "split", "label": "harmful"|"harmless", "category", "source", "lang": "en", "text"}
+Record format = CLAUDE.md prompt format (English input to data_tools.build):
+  {"prompt_id", "split": "harmful|harmless|direction", "category", "source", "variant": "en", "text"}
+ids: h0001.. harmful, s0001.. harmless (pilot reuses full ids), d0001.. direction.
+Direction rows: category = "harmful" | "harmless" (CLAUDE.md has no label field; this is how
+extract_direction can tell the two sides apart).
 
-Deterministic: fixed seed, stable ids derived from source ids.
+Deterministic: fixed seed; ids assigned in sorted (category, source id) order.
 Usage: python analysis/get_data.py [--force]
 """
 import csv
@@ -68,9 +73,22 @@ def read_csv(name: str) -> list[dict]:
         return list(csv.DictReader(f))
 
 
-def rec(pid, label, category, source, text):
-    return {"prompt_id": pid, "split": None, "label": label, "category": category,
-            "source": source, "lang": "en", "text": " ".join(text.split())}
+def rec(src_id, label, category, source, text):
+    # internal record; label/src_id are dropped before writing
+    return {"src_id": src_id, "label": label, "category": category,
+            "source": source, "text": " ".join(text.split())}
+
+
+def assign_ids(rows: list[dict], prefix: str) -> None:
+    for i, r in enumerate(sorted(rows, key=lambda r: (r["category"], r["src_id"])), 1):
+        r["prompt_id"] = f"{prefix}{i:04d}"
+
+
+def out_row(r: dict, direction: bool = False) -> dict:
+    return {"prompt_id": r["prompt_id"],
+            "split": "direction" if direction else r["label"],
+            "category": r["label"] if direction else r["category"],
+            "source": r["source"], "variant": "en", "text": r["text"]}
 
 
 def balanced(records: list[dict], n: int, rng: random.Random) -> list[dict]:
@@ -126,22 +144,34 @@ def build() -> None:
     pilot = balanced(full_harmful, N_PILOT, rng) + balanced(full_harmless, N_PILOT, rng)
     full = full_harmful + full_harmless
     direction = dir_harmful + dir_harmless
+    assign_ids(full_harmful, "h")
+    assign_ids(full_harmless, "s")
+    assign_ids(direction, "d")
 
-    # sanity: ids unique, direction disjoint from eval
-    full_ids = {r["prompt_id"] for r in full}
-    assert len(full_ids) == len(full), "duplicate ids in full"
-    assert not full_ids & {r["prompt_id"] for r in direction}, "direction overlaps eval"
-    assert {r["prompt_id"] for r in pilot} <= full_ids
+    # sanity: ids unique, direction disjoint from eval (by source id), pilot within full
+    full_src = {r["src_id"] for r in full}
+    assert len(full_src) == len(full), "duplicate source ids in full"
+    assert not full_src & {r["src_id"] for r in direction}, "direction overlaps eval"
+    assert {r["src_id"] for r in pilot} <= full_src
 
-    for name, rows in [("full", full), ("pilot", pilot), ("direction", direction)]:
-        rows = sorted(rows, key=lambda r: (r["label"], r["category"], r["prompt_id"]))
-        with open(RAW / f"en_{name}.jsonl", "w", encoding="utf-8") as f:
-            for r in rows:
-                f.write(json.dumps({**r, "split": name}, ensure_ascii=False) + "\n")
-        counts = Counter((r["label"], r["category"]) for r in rows)
+    with open(RAW / "id_map.csv", "w", newline="", encoding="utf-8") as f:
+        w = csv.writer(f)
+        w.writerow(["prompt_id", "source", "source_id"])
+        for r in sorted(full + direction, key=lambda r: r["prompt_id"]):
+            w.writerow([r["prompt_id"], r["source"], r["src_id"]])
+
+    outputs = [("full", full, False), ("pilot", pilot, False), ("direction", direction, True)]
+    for name, rows, is_dir in outputs:
+        rows = [out_row(r, is_dir) for r in sorted(rows, key=lambda r: r["prompt_id"])]
+        paths = [RAW / f"en_{name}.jsonl"] + ([RAW.parent / "direction.jsonl"] if is_dir else [])
+        for path in paths:
+            with open(path, "w", encoding="utf-8") as f:
+                for r in rows:
+                    f.write(json.dumps(r, ensure_ascii=False) + "\n")
+        counts = Counter((r["split"], r["category"]) for r in rows)
         print(f"\n{name}: {len(rows)} rows")
-        for (lab, cat), n in sorted(counts.items()):
-            print(f"  {lab:9s} {cat:40s} {n}")
+        for (sp, cat), n in sorted(counts.items()):
+            print(f"  {sp:9s} {cat:40s} {n}")
 
 
 if __name__ == "__main__":
