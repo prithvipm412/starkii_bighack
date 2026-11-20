@@ -1,13 +1,14 @@
 # Mac2 status
 
 Done:
-- Changed `configs/mac2_llama.yaml` to use `unsloth/Llama-3.2-3B-Instruct` in commit `df184d1`.
+- Set `model_id: unsloth/Llama-3.2-3B-Instruct` in config commit `df184d1`.
+- Extracted Llama refusal direction from 128 prompts; direction artifact is in `results/mac2/`.
 
 Doing:
-- Preparing the Llama direction extraction and pilot.
+- Pilot generation for `none,steer_gated,steer_always`; local MPS unavailable, so the model is running on CPU. Replies are saved locally under ignored `outputs/`.
 
 Blocked:
-- `data_tools/output/pilot.jsonl`, `full.jsonl`, and `direction.jsonl` are not present in this checkout. The output directory contains only the local harmless test fixture and its variants.
+- None. HF cache is available; HF offline mode is enabled because this environment cannot resolve Hugging Face.
 
 Next:
-- Once the prompt files are available, run direction extraction, the three-condition pilot, push `results/mac2/` and the per-condition × variant rate table, then start the full `none` run in the background.
+- Finish pilot, rerun with `--rescore` for cached Llama Guard judge scores, calculate the harmful/harmless refusal rate table per condition × variant, push `results/mac2/` and this status, then start the full `none` run in the background.
