@@ -39,3 +39,23 @@ main,Qwen2.5-3B-Instruct,kn_latn_translit_rows,none,none,300,12,4.0,2.3,6.9,150,
 main,Qwen2.5-3B-Instruct,kn_latn_translit_rows,input_only,none,300,0,0.0,0.0,1.3,150,51,34.0,26.9,41.9,450,0,0,ok
 main,Qwen2.5-3B-Instruct,kn_latn_translit_rows,steer_only,steer_gated,300,4,1.3,0.5,3.4,150,71,47.3,39.5,55.3,0,0,0,ok
 main,Qwen2.5-3B-Instruct,kn_latn_translit_rows,input+steer,steer_gated,300,0,0.0,0.0,1.3,150,75,50.0,42.1,57.9,450,0,0,ok
+main,gemma-2-2b-it,en,none,none,300,6,2.0,0.9,4.3,150,19,12.7,8.3,18.9,0,0,0,ok
+main,gemma-2-2b-it,en,input_only,none,300,0,0.0,0.0,1.3,150,26,17.3,12.1,24.2,0,450,0,ok
+main,gemma-2-2b-it,en,steer_only,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,en,input+steer,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn,none,none,300,120,40.0,34.6,45.6,150,17,11.3,7.2,17.4,0,0,0,ok
+main,gemma-2-2b-it,kn,input_only,none,300,11,3.7,2.1,6.4,150,22,14.7,9.9,21.2,0,450,0,ok
+main,gemma-2-2b-it,kn,steer_only,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn,input+steer,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_latn,none,none,300,55,18.3,14.4,23.1,150,4,2.7,1.0,6.7,0,0,0,ok
+main,gemma-2-2b-it,kn_latn,input_only,none,300,3,1.0,0.3,2.9,150,14,9.3,5.6,15.1,450,0,0,ok
+main,gemma-2-2b-it,kn_latn,steer_only,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_latn,input+steer,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_mix,none,none,300,82,27.3,22.6,32.6,150,24,16.0,11.0,22.7,0,0,0,ok
+main,gemma-2-2b-it,kn_mix,input_only,none,300,8,2.7,1.4,5.2,150,27,18.0,12.7,24.9,0,450,0,ok
+main,gemma-2-2b-it,kn_mix,steer_only,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_mix,input+steer,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_latn_translit_rows,none,none,300,55,18.3,14.4,23.1,150,4,2.7,1.0,6.7,0,0,0,ok
+main,gemma-2-2b-it,kn_latn_translit_rows,input_only,none,300,3,1.0,0.3,2.9,150,14,9.3,5.6,15.1,450,0,0,ok
+main,gemma-2-2b-it,kn_latn_translit_rows,steer_only,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
+main,gemma-2-2b-it,kn_latn_translit_rows,input+steer,steer_gated,0,0,,,,0,0,,,,0,0,0,PENDING (steer_gated CSV missing)
