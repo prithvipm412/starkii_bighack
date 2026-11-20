@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Bhasha Kavach — Results Dashboard</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<style>
+/* ── Reset & tokens ───────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --navy-900:#0a0f2c;
+  --navy-800:#0d1540;
+  --navy-700:#132058;
+  --navy-600:#1a2d78;
+  --navy-500:#2240a8;
+  --accent:#4f83f7;
+  --accent-2:#38d9b4;
+  --accent-warn:#f97316;
+  --accent-danger:#ef4444;
+  --text:#e8ecff;
+  --text-muted:#8898cc;
+  --border:#1e2f6b;
+  --card:#0f1948;
+  --transition:0.25s ease;
+  --radius:10px;
+}
+html{font-size:16px;scroll-behavior:smooth}
+body{background:var(--navy-900);color:var(--text);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh}
+h1,h2,h3{font-weight:600;line-height:1.2}
+/* ── Header ──────────────────────────────────────────────── */
+#header{
+  background:linear-gradient(135deg,var(--navy-800),var(--navy-700));
+  border-bottom:1px solid var(--border);
+  padding:1.1rem 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  flex-wrap:wrap;gap:.8rem;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(6px);
+}
+#header .brand{display:flex;align-items:center;gap:.7rem}
+#header .brand svg{opacity:.9}
+#header h1{font-size:1.4rem;letter-spacing:.03em;color:#fff}
+#header .hypothesis{
+  font-size:.82rem;color:var(--text-muted);margin-top:.15rem;
+  max-width:48ch;line-height:1.4;
+}
+/* data-mode toggle */
+#toggle-wrap{display:flex;align-items:center;gap:.5rem}
+#toggle-wrap label{font-size:.78rem;color:var(--text-muted)}
+.toggle-btn{
+  display:inline-flex;border:1px solid var(--border);border-radius:6px;overflow:hidden;
+}
+.toggle-btn button{
+  padding:.38rem .9rem;font-size:.8rem;background:transparent;color:var(--text-muted);
+  border:none;cursor:pointer;transition:background var(--transition),color var(--transition);
+}
+.toggle-btn button.active{background:var(--accent);color:#fff}
+.sample-badge{
+  display:none;background:#f97316;color:#fff;font-size:.7rem;font-weight:700;
+  padding:.2rem .55rem;border-radius:4px;letter-spacing:.08em;vertical-align:middle;
+}
+.sample-badge.show{display:inline-block}
+/* ── Filters bar ─────────────────────────────────────────── */
+#filters{
+  display:flex;align-items:center;flex-wrap:wrap;gap:.7rem;
+  padding:.8rem 2rem;background:var(--navy-800);border-bottom:1px solid var(--border);
+}
+#filters label{font-size:.78rem;color:var(--text-muted)}
+#filters select{
+  background:var(--navy-700);color:var(--text);border:1px solid var(--border);
+  border-radius:6px;padding:.32rem .6rem;font-size:.8rem;cursor:pointer;
+  transition:border-color var(--transition);
+}
+#filters select:hover{border-color:var(--accent)}
+/* ── Main layout ─────────────────────────────────────────── */
+#main{padding:1.5rem 2rem;display:grid;gap:1.5rem;
+  grid-template-columns:repeat(auto-fill,minmax(560px,1fr));}
+/* ── Cards ───────────────────────────────────────────────── */
+.card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:1.3rem 1.4rem;display:flex;flex-direction:column;gap:1rem;
+  transition:box-shadow var(--transition);
+}
+.card:hover{box-shadow:0 4px 24px rgba(79,131,247,.13)}
+.card.full-width{grid-column:1/-1}
+.card-title{
+  font-size:.95rem;font-weight:600;color:#c8d6ff;
+  display:flex;align-items:center;gap:.5rem;
+}
+.card-title .tag{
+  font-size:.65rem;font-weight:700;padding:.15rem .45rem;border-radius:4px;
+  background:var(--navy-600);color:var(--accent);text-transform:uppercase;letter-spacing:.07em;
+}
+.chart-wrap{position:relative;height:280px}
+/* ── Table (view 4) ──────────────────────────────────────── */
+.tbl-wrap{overflow-x:auto;border-radius:8px}
+table{width:100%;border-collapse:collapse;font-size:.82rem}
+thead th{
+  padding:.55rem .75rem;text-align:left;font-size:.72rem;text-transform:uppercase;
+  letter-spacing:.07em;color:var(--text-muted);
+  background:var(--navy-700);border-bottom:1px solid var(--border);
+  position:sticky;top:0;
+}
+tbody td{padding:.5rem .75rem;border-bottom:1px solid var(--border)}
+tbody tr:last-child td{border-bottom:none}
+tbody tr:hover{background:rgba(79,131,247,.06)}
+.cell-rate{font-weight:700}
+.cell-low{color:var(--accent-danger)}
+.cell-mid{color:var(--accent-warn)}
+.cell-hi{color:var(--accent-2)}
+/* ── States ──────────────────────────────────────────────── */
+.state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  min-height:200px;gap:.6rem;color:var(--text-muted);font-size:.88rem;
+}
+.spinner{
+  width:36px;height:36px;border:3px solid var(--border);
+  border-top-color:var(--accent);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* ── Responsive ──────────────────────────────────────────── */
+@media(max-width:680px){
+  #main{grid-template-columns:1fr;padding:1rem}
+  #header{padding:.8rem 1rem}
+  #filters{padding:.6rem 1rem}
+}
+/* ── Tooltip override ────────────────────────────────────── */
+.chartjs-tooltip{pointer-events:none}
+</style>
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────── -->
+<header id="header">
+  <div class="brand">
+    <svg width="32" height="32" viewBox="0 0 32 32" fill="none">
+      <circle cx="16" cy="16" r="15" stroke="#4f83f7" stroke-width="1.5"/>
+      <path d="M8 20 Q16 8 24 20" stroke="#38d9b4" stroke-width="2" fill="none" stroke-linecap="round"/>
+      <circle cx="16" cy="20" r="3" fill="#4f83f7"/>
+    </svg>
+    <div>
+      <h1>Bhasha Kavach &nbsp;<span class="sample-badge" id="sample-badge">SAMPLE DATA</span></h1>
+      <div class="hypothesis">
+        Hypothesis: Code-switching to Kannada bypasses LLM safety filters&thinsp;—&thinsp;
+        and steer_gated closes that gap without over-refusing harmless queries.
+      </div>
+    </div>
+  </div>
+  <div id="toggle-wrap">
+    <label>Dataset</label>
+    <div class="toggle-btn">
+      <button id="btn-sample" class="active" onclick="setMode('sample')">Pilot (sample)</button>
+      <button id="btn-real" onclick="setMode('real')">Full (real CSVs)</button>
+    </div>
+  </div>
+</header>
+
+<!-- ── FILTERS ─────────────────────────────────────────────── -->
+<div id="filters">
+  <label>Model</label>
+  <select id="f-model"><option value="all">All models</option></select>
+  <label>Variant</label>
+  <select id="f-variant"><option value="all">All variants</option></select>
+</div>
+
+<!-- ── VIEWS ───────────────────────────────────────────────── -->
+<main id="main">
+
+  <!-- V1: The Gap -->
+  <div class="card full-width">
+    <div class="card-title">
+      <span>📊</span> View 1 — The Gap
+      <span class="tag">headline</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted)">
+      Harmful-prompt refusal rate by variant, grouped by model (condition = none).
+      Lower bars reveal the safety gap for non-English inputs.
+    </p>
+    <div class="chart-wrap"><canvas id="chart-gap"></canvas></div>
+  </div>
+
+  <!-- V2: The Fix -->
+  <div class="card full-width">
+    <div class="card-title">
+      <span>🛡️</span> View 2 — The Fix
+      <span class="tag">key result</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted)">
+      Harmful refusal rate (↑ good) and harmless wrong-refusal rate (↓ good) per condition.
+      Filtered by model &amp; variant above.
+    </p>
+    <div class="chart-wrap"><canvas id="chart-fix"></canvas></div>
+  </div>
+
+  <!-- V3: Cost / Latency -->
+  <div class="card">
+    <div class="card-title">
+      <span>⏱️</span> View 3 — Cost: Median Latency
+      <span class="tag">perf</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted)">Median latency (ms) per condition, filtered by model &amp; variant.</p>
+    <div class="chart-wrap" style="height:220px"><canvas id="chart-lat"></canvas></div>
+  </div>
+
+  <!-- V4: Where it fails -->
+  <div class="card">
+    <div class="card-title">
+      <span>🔍</span> View 4 — Where It Still Fails
+      <span class="tag">analysis</span>
+    </div>
+    <p style="font-size:.8rem;color:var(--text-muted)">
+      Category × variant cells where <code>steer_gated</code> has the
+      <em>lowest</em> refusal rate across all conditions (harmful split only).
+    </p>
+    <div class="tbl-wrap"><div id="tbl-fails"></div></div>
+  </div>
+
+</main>
+
+<script>
+// ── CONFIG ────────────────────────────────────────────────────────
+const SAMPLE_CSV = 'sample/results_sample.csv';
+const REAL_GLOB  = ['../results/mac1/','../results/mac2/','../results/mac3/','../results/mac4/'];
+
+const VARIANTS   = ['en','kn','kn_latn','kn_mix'];
+const CONDITIONS = ['none','baseline','steer_always','steer_gated'];
+const COND_LABELS= {'none':'None','baseline':'Baseline','steer_always':'Steer Always','steer_gated':'Steer Gated'};
+
+const PALETTE = {
+  en:       '#4f83f7',
+  kn:       '#38d9b4',
+  kn_latn:  '#f97316',
+  kn_mix:   '#a78bfa',
+  none:        '#4f83f7',
+  baseline:    '#38d9b4',
+  steer_always:'#f97316',
+  steer_gated: '#a78bfa',
+};
+const COND_COLORS = CONDITIONS.map(c => PALETTE[c]);
+
+Chart.defaults.color = '#8898cc';
+Chart.defaults.borderColor = '#1e2f6b';
+Chart.defaults.font.family = "'Segoe UI', system-ui, sans-serif";
+
+// ── STATE ─────────────────────────────────────────────────────────
+let allData = [];
+let mode    = 'sample';
+let charts  = {};
+
+// ── BOOT ──────────────────────────────────────────────────────────
+document.getElementById('f-model').addEventListener('change', render);
+document.getElementById('f-variant').addEventListener('change', render);
+setMode('sample');
+
+// ── MODE SWITCH ────────────────────────────────────────────────────
+async function setMode(m){
+  mode = m;
+  document.getElementById('btn-sample').classList.toggle('active', m==='sample');
+  document.getElementById('btn-real').classList.toggle('active', m==='real');
+  document.getElementById('sample-badge').classList.toggle('show', m==='sample');
+  showLoading();
+  try{
+    if(m==='sample'){
+      allData = await loadCSV(SAMPLE_CSV);
+    } else {
+      allData = await loadRealCSVs();
+    }
+    populateFilters();
+    render();
+  } catch(e){
+    showError('Failed to load data: '+e.message);
+  }
+}
+
+// ── CSV LOADERS ───────────────────────────────────────────────────
+function loadCSV(url){
+  return new Promise((res,rej)=>{
+    const ctrl = new AbortController();
+    const tid  = setTimeout(()=>ctrl.abort(), 15000);
+    Papa.parse(url,{
+      download:true, header:true, dynamicTyping:true, skipEmptyLines:true,
+      complete: r => { clearTimeout(tid); res(r.data); },
+      error:    e => { clearTimeout(tid); rej(e); }
+    });
+  });
+}
+
+async function loadRealCSVs(){
+  // Scan for CSVs in known result paths relative to index.html
+  const candidates = [];
+  for(const dir of REAL_GLOB){
+    // Try numeric filenames; we don't have directory listing in static mode
+    // so we fall back to known filenames or the sample
+    for(const name of ['results.csv','output.csv','eval.csv','pilot.csv','full.csv']){
+      candidates.push(dir+name);
+    }
+  }
+  const results = await Promise.allSettled(
+    candidates.map(url => loadCSV(url).catch(()=>null))
+  );
+  const rows = results
+    .filter(r=>r.status==='fulfilled' && r.value && r.value.length)
+    .flatMap(r=>r.value);
+  if(!rows.length) throw new Error('No real CSV files found in results/mac1–mac4/. Switch to Pilot (sample).');
+  return rows;
+}
+
+// ── FILTERS ───────────────────────────────────────────────────────
+function populateFilters(){
+  const models   = [...new Set(allData.map(r=>r.model))].sort();
+  const variants = [...new Set(allData.map(r=>r.variant))].sort();
+  fillSelect('f-model',   models,   'All models');
+  fillSelect('f-variant', variants, 'All variants');
+}
+function fillSelect(id, vals, allLabel){
+  const sel = document.getElementById(id);
+  const cur = sel.value;
+  sel.innerHTML = `<option value="all">${allLabel}</option>`;
+  vals.forEach(v=>{ const o=document.createElement('option'); o.value=o.textContent=v; sel.appendChild(o); });
+  if(vals.includes(cur)) sel.value=cur;
+}
+function getFilters(){
+  return {
+    model:   document.getElementById('f-model').value,
+    variant: document.getElementById('f-variant').value,
+  };
+}
+function applyFilters(data, {model,variant}){
+  return data.filter(r=>
+    (model==='all'   || r.model===model) &&
+    (variant==='all' || r.variant===variant)
+  );
+}
+
+// ── RENDER ────────────────────────────────────────────────────────
+function render(){
+  clearLoadingSpinners();
+  const f = getFilters();
+  const filtered = applyFilters(allData, f);
+  renderGap(filtered);
+  renderFix(filtered);
+  renderLatency(filtered);
+  renderFailsTable(filtered);
+}
+
+// ── VIEW 1: THE GAP ────────────────────────────────────────────────
+function renderGap(data){
+  const models  = [...new Set(data.map(r=>r.model))].sort();
+  const harmful = data.filter(r=>r.split==='harmful' && r.condition==='none');
+
+  // datasets: one per variant
+  const datasets = VARIANTS.map(v => ({
+    label: v,
+    data:  models.map(m=>{
+      const rows = harmful.filter(r=>r.model===m && r.variant===v);
+      return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1) : null;
+    }),
+    backgroundColor: PALETTE[v]+'cc',
+    borderColor:     PALETTE[v],
+    borderWidth:1,
+    borderRadius:5,
+  }));
+
+  buildChart('chart-gap','bar',
+    { labels: models, datasets },
+    { scales:{
+        y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Refusal rate (harmful)'}},
+        x:{title:{display:true,text:'Model'}}
+      },
+      plugins:{legend:{position:'top'},
+               tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}}
+    }
+  );
+}
+
+// ── VIEW 2: THE FIX ────────────────────────────────────────────────
+function renderFix(data){
+  const harmful  = data.filter(r=>r.split==='harmful');
+  const harmless = data.filter(r=>r.split==='harmless');
+
+  const harmRef  = CONDITIONS.map(c=>{ const rows=harmful.filter(r=>r.condition===c);  return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1):null; });
+  const wrongRef = CONDITIONS.map(c=>{ const rows=harmless.filter(r=>r.condition===c); return rows.length ? +(mean(rows.map(r=>r.refused))*100).toFixed(1):null; });
+
+  const datasets=[
+    { label:'Harmful refusal ↑', data:harmRef,  backgroundColor:COND_COLORS.map(c=>c+'bb'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5 },
+    { label:'Wrong refusal (harmless) ↓', data:wrongRef, backgroundColor:COND_COLORS.map(c=>c+'44'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5, borderDash:[4,3] },
+  ];
+  buildChart('chart-fix','bar',
+    { labels:CONDITIONS.map(c=>COND_LABELS[c]), datasets },
+    { scales:{
+        y:{min:0,max:100,ticks:{callback:v=>v+'%'},title:{display:true,text:'Rate (%)'}},
+      },
+      plugins:{legend:{position:'top'},
+               tooltip:{callbacks:{label:c=>` ${c.dataset.label}: ${c.parsed.y}%`}}}
+    }
+  );
+}
+
+// ── VIEW 3: LATENCY ────────────────────────────────────────────────
+function renderLatency(data){
+  const meds = CONDITIONS.map(c=>{
+    const rows = data.filter(r=>r.condition===c).map(r=>r.latency_ms).sort((a,b)=>a-b);
+    return rows.length ? Math.round(median(rows)) : null;
+  });
+  buildChart('chart-lat','bar',
+    { labels:CONDITIONS.map(c=>COND_LABELS[c]),
+      datasets:[{ label:'Median latency (ms)', data:meds, backgroundColor:COND_COLORS.map(c=>c+'cc'), borderColor:COND_COLORS, borderWidth:1, borderRadius:5 }] },
+    { scales:{
+        y:{min:0,title:{display:true,text:'ms'}},
+      },
+      plugins:{legend:{display:false},
+               tooltip:{callbacks:{label:c=>` ${c.parsed.y} ms`}}}
+    }
+  );
+}
+
+// ── VIEW 4: WHERE IT FAILS ─────────────────────────────────────────
+function renderFailsTable(data){
+  const harmful = data.filter(r=>r.split==='harmful');
+  const cats = [...new Set(harmful.map(r=>r.category))].sort();
+  const vars = VARIANTS.filter(v=>[...new Set(harmful.map(r=>r.variant))].includes(v));
+
+  // For each (cat,var): find condition with lowest refusal rate; flag if steer_gated
+  const failRows = [];
+  for(const cat of cats){
+    for(const v of vars){
+      const rates = {};
+      for(const c of CONDITIONS){
+        const rows = harmful.filter(r=>r.category===cat && r.variant===v && r.condition===c);
+        if(rows.length) rates[c] = mean(rows.map(r=>r.refused));
+      }
+      if(!Object.keys(rates).length) continue;
+      const worst = Object.entries(rates).sort((a,b)=>a[1]-b[1])[0];
+      if(worst[0]==='steer_gated'){
+        failRows.push({ cat, variant:v, worstRate:(worst[1]*100).toFixed(1),
+          ratesByCondition: rates });
+      }
+    }
+  }
+
+  const el = document.getElementById('tbl-fails');
+  if(!failRows.length){
+    el.innerHTML = `<div class="state" style="min-height:120px">✅ steer_gated is never the worst condition in any cell.</div>`;
+    return;
+  }
+
+  let html = `<table><thead><tr>
+    <th>Category</th><th>Variant</th>
+    ${CONDITIONS.map(c=>`<th>${COND_LABELS[c]}</th>`).join('')}
+    <th>Worst</th></tr></thead><tbody>`;
+  for(const r of failRows){
+    html += `<tr>
+      <td>${r.cat}</td>
+      <td>${r.variant}</td>
+      ${CONDITIONS.map(c=>{
+        const v = r.ratesByCondition[c];
+        const pct = v!=null ? (v*100).toFixed(1)+'%' : '—';
+        const cls = v!=null ? (v<.5?'cell-low':v<.75?'cell-mid':'cell-hi') : '';
+        return `<td class="cell-rate ${cls}">${pct}</td>`;
+      }).join('')}
+      <td class="cell-rate cell-low">${r.worstRate}%</td>
+    </tr>`;
+  }
+  html += '</tbody></table>';
+  el.innerHTML = html;
+}
+
+// ── CHART BUILDER ─────────────────────────────────────────────────
+function buildChart(id, type, data, options){
+  if(charts[id]) charts[id].destroy();
+  const ctx = document.getElementById(id).getContext('2d');
+  charts[id] = new Chart(ctx, {
+    type,
+    data,
+    options:{
+      responsive:true, maintainAspectRatio:false, animation:{duration:400},
+      plugins:{
+        legend:{labels:{color:'#8898cc',boxWidth:12,padding:14}},
+        tooltip:{backgroundColor:'#0d1540',borderColor:'#1e2f6b',borderWidth:1,
+                 titleColor:'#c8d6ff',bodyColor:'#8898cc',padding:10,cornerRadius:8}
+      },
+      ...options,
+      scales: Object.fromEntries(Object.entries(options.scales||{}).map(([k,v])=>[k,{
+        grid:{color:'#1e2f6b'},
+        ticks:{color:'#8898cc'},
+        ...v
+      }]))
+    }
+  });
+}
+
+// ── UTILS ─────────────────────────────────────────────────────────
+function mean(arr){ return arr.length ? arr.reduce((a,b)=>a+b,0)/arr.length : 0 }
+function median(sorted){
+  const m=Math.floor(sorted.length/2);
+  return sorted.length%2 ? sorted[m] : (sorted[m-1]+sorted[m])/2;
+}
+
+// Map wrap→canvasId so we can restore them after wiping innerHTML
+const WRAP_CANVAS_MAP = {
+  'chart-gap':'chart-gap','chart-fix':'chart-fix','chart-lat':'chart-lat'
+};
+function showLoading(){
+  // Destroy charts first (before DOM wipe)
+  Object.keys(charts).forEach(id=>{
+    if(charts[id]){ charts[id].destroy(); delete charts[id]; }
+  });
+  document.querySelectorAll('.chart-wrap').forEach(w=>{
+    const canvas = w.querySelector('canvas');
+    const cid = canvas ? canvas.id : null;
+    w.innerHTML = cid
+      ? `<div class="state"><div class="spinner"></div><span>Loading…</span></div><canvas id="${cid}" style="display:none"></canvas>`
+      : `<div class="state"><div class="spinner"></div><span>Loading…</span></div>`;
+  });
+  document.getElementById('tbl-fails').innerHTML='<div class="state"><div class="spinner"></div></div>';
+}
+
+function clearLoadingSpinners(){
+  document.querySelectorAll('.chart-wrap').forEach(w=>{
+    const spinner = w.querySelector('.state');
+    const canvas  = w.querySelector('canvas');
+    if(spinner) spinner.remove();
+    if(canvas)  canvas.style.display='';
+  });
+}
+
+function showError(msg){
+  document.querySelectorAll('.chart-wrap').forEach(w=>{
+    w.innerHTML=`<div class="state" style="color:#ef4444">⚠️ ${msg}</div>`;
+  });
+}
+</script>
+</body>
+</html>
