@@ -544,9 +544,21 @@ async function listDirCSVs(dirUrl) {
     clearTimeout(tid);
     if (!resp.ok) return [];
     const html = await resp.text();
+    // Match only CSV filenames directly in dirUrl.
+    // Strictly ignore subfolders (e.g. results/mac1/smoke/) and parent/absolute links.
     const csvRefs = [...html.matchAll(/href="([^"?#]+\.csv)"/gi)]
       .map(m => m[1])
-      .filter(ref => !ref.startsWith('http') && !ref.startsWith('/') && !ref.startsWith('?'));
+      .filter(ref => {
+        if (!ref || ref.startsWith('http') || ref.startsWith('/') || ref.startsWith('?') || ref.startsWith('#')) {
+          return false;
+        }
+        // Exclude any subfolder traversal: decodeURIComponent handles %2F or %5C
+        const decoded = decodeURIComponent(ref);
+        if (decoded.includes('/') || decoded.includes('\\')) {
+          return false;
+        }
+        return true;
+      });
     return csvRefs.map(ref => dirUrl + ref);
   } catch(_) { return []; }
 }

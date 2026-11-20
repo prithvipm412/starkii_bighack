@@ -52,7 +52,8 @@ Status bar: per-model row counts + last-updated timestamp.
 
 ## Switching to Real Pilot CSVs
 
-1. Drop CSVs into `results/mac1/`, `results/mac2/`, `results/mac3/`, or `results/mac4/`.
+1. Drop CSVs directly into `results/mac1/`, `results/mac2/`, `results/mac3/`, or `results/mac4/`.
+   Subfolders (e.g. `results/mac1/smoke/` for smoke tests) are strictly ignored.
 2. Ensure the exact header matches:
    ```
    prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit
