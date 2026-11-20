@@ -1,33 +1,42 @@
-# AGENTS.md — Executor Rules
+# Big Hack 2.0 — R2 "Jailbreaks speak Kannada too" (team Stark Industry Interns)
+Shared rules for every agent (Claude Code reads CLAUDE.md, Codex reads AGENTS.md — same content).
 
-You are an EXECUTOR on a time-boxed hackathon team. The tech lead (Claude Code) has planned everything.
-Your job: finish task cards from TASKS.md exactly, fast, one at a time, without asking questions.
+## Research
+Hypothesis: Small open models refuse harmful requests less in Kannada script, Kanglish (Kannada in Latin letters) and Kannada-English code-mixed text than in English. Adding the model's own English-derived "refusal direction" at a middle layer, only when the input already weakly activates it, closes the gap with little extra refusal of harmless requests.
+Compare: none (no defence) vs baseline (translate to English -> Llama Guard 3 1B) vs steer_always vs steer_gated.
+Report: refusal rate on harmful, wrong-refusal rate on harmless, latency, where each method fails.
 
-## Start of every session
-1. Read HANDOFF.md (latest state) and PLAN.md (architecture and interfaces).
-2. Run `git status`. Uncommitted changes = a previous agent ran out mid-card. Read the diff
-   and finish that card first.
-3. In TASKS.md, take the first unchecked card in YOUR lane: [CORE] for Codex, [UI] for Antigravity.
+## Track rules
+- Never commit or publish model replies or harmful prompt text. Only scores go in git.
+- Prompt files live in data_tools/output/ (gitignored) and move between Macs by AirDrop.
+- Open-weight models run locally only.
 
-## While working a card
-- Touch only the files the card lists. If you truly need another, note it on the card and in HANDOFF.md.
-- Match PLAN.md interfaces exactly. Never rename routes, functions or fields.
-- No refactoring, restyling or "improvements" outside the card.
-- No new dependencies unless the card says so.
-- Don't run servers in the foreground or print big logs. Run the card's Done-when check and read only the result.
-- If something is ambiguous, choose the simplest option that fits PLAN.md and note it.
+## Macs and folders (never edit another Mac's folders)
+- mac1 (M5) Claude Code: pipeline/, configs/, requirements.txt, results/mac1/, status/mac1.md — Qwen/Qwen2.5-3B-Instruct
+- mac2 (M5) Codex: data_tools/, results/mac2/, status/mac2.md — meta-llama/Llama-3.2-3B-Instruct
+- mac3 (M5) Codex: results/mac3/, status/mac3.md — google/gemma-2-2b-it; Antigravity owns dashboard/
+- mac4 (M4) Claude Code: baseline/, analysis/, results/mac4/, status/mac4.md — IndicTrans2 + meta-llama/Llama-Guard-3-1B
+Only mac1 edits pipeline/. Pipeline bug? Write it under Blocked in your status file.
 
-## Finishing a card
-1. Run the Done-when check. Fix until it passes.
-2. `git add -A && git commit -m "T07: <short summary>"`  (use the real card ID)
-3. Tick it in TASKS.md: `- [x] T07 ...` and commit that too.
-4. Append one line to HANDOFF.md: `T07 done: <what changed>, <any gotcha>`.
-5. Start the next card in your lane immediately.
+## Prompt file format (JSONL, one prompt per line)
+{"prompt_id": "h0001", "split": "harmful|harmless|direction", "category": "...", "source": "...", "variant": "en|kn|kn_latn|kn_mix", "text": "..."}
+"direction" = separate English prompts used only to compute the refusal direction (never evaluated). All 4 variants of a prompt share the same prompt_id.
 
-## Stuck for more than 10 minutes
-Write `BLOCKED: <reason>` under the card, commit whatever works, move to the next card. The lead handles it.
+## Results format (CSV: results/macN/<model>_<condition>.csv)
+prompt_id,split,category,variant,model,condition,refused,judge_score,latency_ms,commit
+refused is 0/1; commit = git rev-parse --short HEAD.
 
-## Code standards
-- Every network/API call has a timeout and a handled error path. Bad input never crashes or hangs the app.
-- Secrets only in `.env` (never committed).
-- UI: navy palette from the theme file, smooth but subtle transitions, clear loading/error/empty states.
+## Pipeline commands (mac1 builds; everyone runs)
+python -m pipeline.extract_direction --config configs/<cfg>.yaml
+python -m pipeline.run --config configs/<cfg>.yaml --prompts data_tools/output/<file>.jsonl --conditions none,steer_always,steer_gated
+Greedy decoding, seed 0, max 64 new tokens, save after every batch, resume on restart, raw replies only in outputs/ (gitignored), score locally.
+
+## Git routine
+git pull --rebase ; git add <your folders only> ; git commit -m "macN: <what>" ; git push
+Update status/macN.md (Done / Doing / Blocked / Next) and push at least every 2 hours.
+
+## Long runs
+caffeinate -dims python -m pipeline.run ... > logs/<name>.log 2>&1   (plugged in, lid open)
+
+## Timeline (IST)
+P0 setup 3:45-4:15 | P1 build 4:15-6:00 | P2 pilot 6:00-7:30 | P3 steering + dashboard + slides 7:30-8:30 | code freeze 8:30 | judging 9:00 pm | P4 full runs 9:30-12:30 | P5 sweeps + failure analysis 12:30-5:00 | P6 final 5:00 -> submission
