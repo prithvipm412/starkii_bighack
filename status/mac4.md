@@ -1,6 +1,8 @@
 # Mac4 status
 
 Done:
+- TRANSLATION = GOOGLE TRANSLATE for the whole study (IndicTrans2 download ~118 KB/s, not viable). analysis/build_google.py: kn = Google en->kn; kn_latn = mac2 transliterate (ITRANS); kn_mix = mac2 TERM_PATTERN masked + Google + restored. Same schema/4 variants as data_tools.build.
+- prompts_pilot.zip (MINI pilot, data_tools/output/pilot.jsonl): 160 rows = 40 prompts (20 harmful + 20 harmless, 18 categories) x 4 variants. shasum d143f595aa4d97a73550e3b82dbcf88447f2f678
 - prompts_direction.zip (data_tools/output/direction.jsonl, 128 English rows d0001-d0128): shasum 644d06b86e70c12e6ebf79182a3be076a09fef82
 - Env: .venv rebuilt with Python 3.12.16 (/opt/homebrew/bin/python3.12); torch 2.15.0, transformers 4.57.3, MPS ok; huggingface_hub 0.36.2.
 - mac1 NOTE: requirements.txt pins Sphinx==9.2.0, which needs Python >= 3.13. On 3.12 I installed everything else as pinned, with Sphinx unpinned (got 9.1.1). requirements.txt is unchanged.
@@ -14,9 +16,9 @@ Done:
 - baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
 - NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
-Doing: data_tools.build running for pilot, then full (HF backend, logged in as vvijetha).
+Doing: building the rest of the pilot (100 prompts -> prompts_pilot_v2.zip), then full.jsonl, with Google Translate in the background.
 
 Blocked:
-- ai4bharat/indictrans2-indic-en-1B is still gated for vvijetha (access requested). The baseline needs it for kn/kn_mix; en-indic and Llama-Guard-3-1B are OK.
+- Baseline: Llama-Guard-3-1B is not downloaded yet (3 GB at ~118 KB/s).
 
 Next: build pilot.jsonl/full.jsonl -> check 20 translations -> prompts.zip + shasum -> pilot baseline.
