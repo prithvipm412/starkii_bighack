@@ -14,7 +14,11 @@ Run with HF_HUB_OFFLINE=1 once models are cached.
 Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md results format), appending after
 every prompt and resuming on restart. Translations and prompt text are never written to disk.
 
-Usage: python -m baseline.run_baseline --prompts data_tools/output/pilot.jsonl [--out ...] [--limit N]
+--translit: condition=baseline_translit, kn_latn rows only:
+  kn_latn -> ITRANS -> Kannada script (indic-transliteration; reverse of data_tools.transliterate)
+          -> NLLB kan_Knda -> eng_Latn -> guard. Written to llama-guard-3-1b_baseline_translit.csv.
+
+Usage: python -m baseline.run_baseline --prompts data_tools/output/pilot.jsonl [--translit] [--out ...] [--limit N]
 """
 import argparse
 import csv
@@ -40,6 +44,12 @@ def resolve(repo: str) -> str:
         return snapshot_download(repo, local_files_only=True)
     except Exception:
         return repo
+
+
+def to_kannada_script(text: str) -> str:
+    """Reverse of data_tools.transliterate (Kannada -> ITRANS)."""
+    from indic_transliteration import sanscript
+    return sanscript.transliterate(text, sanscript.ITRANS, sanscript.KANNADA)
 
 
 def git_commit() -> str:
@@ -129,7 +139,9 @@ class Guard:
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--prompts", required=True)
-    ap.add_argument("--out", default=str(ROOT / "results" / "mac4" / f"{MODEL_NAME}_{CONDITION}.csv"))
+    ap.add_argument("--out", help="default results/mac4/llama-guard-3-1b_<condition>.csv")
+    ap.add_argument("--translit", action="store_true",
+                    help="condition=baseline_translit: kn_latn only, back-transliterated then NLLB")
     ap.add_argument("--device", choices=("mps", "cpu"))
     ap.add_argument("--limit", type=int, help="only the first N rows (smoke test)")
     args = ap.parse_args()
@@ -137,8 +149,12 @@ def main():
     path = Path(args.prompts)
     if not path.exists():
         sys.exit(f"ERROR: prompts file not found: {path}")
-    rows = load_prompts(path)[: args.limit] if args.limit else load_prompts(path)
-    out = Path(args.out)
+    condition = "baseline_translit" if args.translit else CONDITION
+    rows = load_prompts(path)
+    if args.translit:
+        rows = [r for r in rows if r.get("variant") == "kn_latn"]
+    rows = rows[: args.limit] if args.limit else rows
+    out = Path(args.out or ROOT / "results" / "mac4" / f"{MODEL_NAME}_{condition}.csv")
     out.parent.mkdir(parents=True, exist_ok=True)
     done = done_keys(out)
     todo = [r for r in rows if (r["prompt_id"], r.get("variant", "en")) not in done]
@@ -151,7 +167,8 @@ def main():
     torch.manual_seed(0)
     try:
         guard = Guard(device)
-        translator = Translator(device) if any(r.get("variant") in ("kn", "kn_mix") for r in todo) else None
+        needs = ("kn", "kn_mix", "kn_latn") if args.translit else ("kn", "kn_mix")
+        translator = Translator(device) if any(r.get("variant") in needs for r in todo) else None
     except Exception as e:
         sys.exit(f"ERROR: model load failed ({type(e).__name__}: {e}). Gated repo? run: hf auth login")
 
@@ -170,7 +187,9 @@ def main():
                 text = r["text"].strip()
                 if not text:
                     raise ValueError("empty text")
-                if variant in ("kn", "kn_mix"):
+                if args.translit and variant == "kn_latn":
+                    text = translator(to_kannada_script(text))
+                elif variant in ("kn", "kn_mix"):
                     text = translator(text)
                 elif variant not in ("en", "kn_latn"):  # kn_latn goes to the guard untranslated
                     raise ValueError(f"unknown variant {variant!r}")
@@ -181,7 +200,7 @@ def main():
                 print(f"error {r['prompt_id']}/{variant}: {type(e).__name__}: {str(e)[:120]}", file=sys.stderr)
                 continue
             w.writerow({"prompt_id": r["prompt_id"], "split": r.get("split", ""), "category": r.get("category", ""),
-                        "variant": variant, "model": MODEL_NAME, "condition": CONDITION, "refused": refused,
+                        "variant": variant, "model": MODEL_NAME, "condition": condition, "refused": refused,
                         "judge_score": score, "latency_ms": latency, "commit": commit})
             f.flush()
             if i % 25 == 0 or i == len(todo):
