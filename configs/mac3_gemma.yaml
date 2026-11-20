@@ -6,7 +6,7 @@ device: mps
 dtype: bfloat16           # gemma-2 overflows (NaN/garbage) in fp16; bf16 is the supported dtype
 attn_implementation: eager  # recommended for gemma-2 (softcapping)
 seed: 0
-max_new_tokens: 64
+max_new_tokens: 256          # same cap for every language; 64 truncated ~95% of pilot replies
 batch_size: 8
 # Steering. null = take the default from outputs/directions/<name>.pt (written by extract_direction):
 #   layer: best-separation layer in the middle third

@@ -159,11 +159,18 @@ def main():
             done = {key(r) for r in saved}
             want = {key(r): text_hash(r["text"]) for r in rows}
             clash = [key(r) for r in saved if r.get("text_sha1") and key(r) in want and r["text_sha1"] != want[key(r)]]
+            mnt = [key(r) for r in saved if r.get("max_new_tokens", 64) != cfg["max_new_tokens"]]  # pre-field files were 64
+            if mnt:
+                raise SystemExit(f"[gen] {stem}: {len(mnt)} saved replies used a different max_new_tokens than "
+                                 f"{cfg['max_new_tokens']}. Not mixing them. Move {rep_path} and "
+                                 f"results/{cfg['machine']}/{stem}.csv aside, then rerun.")
             if clash:
                 raise SystemExit(f"[gen] {stem}: {len(clash)} saved replies were made from DIFFERENT prompt text "
                                  f"for the same (prompt_id, variant), e.g. {clash[:3]}. Not mixing them. Move "
                                  f"{rep_path} and results/{cfg['machine']}/{stem}.csv aside, then rerun.")
             todo = [r for r in rows if key(r) not in done]
+            order = {"en": 0, "kn_mix": 1, "kn_latn": 2, "kn": 3}  # batch by variant: same-length batches, English first
+            todo.sort(key=lambda r: order.get(r["variant"], 9))  # stable: file order kept within a variant
             print(f"[gen] {stem}: {len(done)} done, {len(todo)} to do (L={L} alpha={a} tau={t})")
             if not todo:
                 continue
@@ -190,7 +197,7 @@ def main():
                         f.write(json.dumps({
                             "prompt_id": r["prompt_id"], "variant": r["variant"], "split": r["split"],
                             "category": r["category"], "text_sha1": text_hash(r["text"]), "condition": c, "layer": L, "alpha": a, "tau": t,
-                            "projection": None if p is None else round(p, 4), "steered": s,
+                            "projection": None if p is None else round(p, 4), "steered": s, "max_new_tokens": cfg["max_new_tokens"],
                             "detected_non_en": ne, "reply": rep, "reply_tokens": n,
                             "latency_ms": round(dt * 1000 / len(batch))}, ensure_ascii=False) + "\n")
                 print(f"[gen] {stem} {i + len(batch)}/{len(todo)}  {sum(ntok) / max(dt, 1e-9):.1f} tok/s")

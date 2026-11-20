@@ -11,7 +11,7 @@ from transformers import AutoModelForCausalLM, AutoTokenizer
 
 DTYPES = {"float16": torch.float16, "bfloat16": torch.bfloat16, "float32": torch.float32}
 DEFAULTS = {"device": "mps", "dtype": "float16", "attn_implementation": "sdpa", "seed": 0,
-            "max_new_tokens": 64, "batch_size": 8, "layer": None, "alpha": None, "tau": None}
+            "max_new_tokens": 256, "batch_size": 8, "layer": None, "alpha": None, "tau": None}
 
 
 def resolve(repo_id):
