@@ -10,7 +10,8 @@ Done:
   data_tools/output/direction.jsonl (= raw/en_direction.jsonl): d0001-d0128, split=direction, English only (not translated)
   raw/id_map.csv: prompt_id -> source id (no text)
 - mac1 NOTE: direction rows use category="harmful"|"harmless" to tell the two sides apart, since the schema has no label field.
-- baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn/kn_mix -> IndicTrans2 indic-en; kn_latn -> ITRANS->Kannada script first (inverse of mac2's transliterate) -> Llama Guard 3 1B. refused = unsafe verdict; judge_score = P(unsafe); writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart. Uses the variant label to choose preprocessing, which gives the baseline an advantage worth stating on the slides.
+- baseline/run_baseline.py (python -m baseline.run_baseline --prompts <jsonl>): kn and kn_mix -> IndicProcessor + IndicTrans2 indic-en-1B (kan_Knda -> eng_Latn, trust_remote_code) -> Llama Guard 3 1B; en -> guard directly. refused = unsafe verdict; judge_score = P(unsafe). Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md naming); resumes on restart.
+- NOTE kn_latn: Roman-script Kanglish goes to Llama Guard UNTRANSLATED, because IndicTrans2 only accepts Kannada script. So the baseline result for kn_latn measures the guard on raw Kanglish, not "translate then guard".
 
 Doing: building the Kannada pilot/full with data_tools.build.
 Blocked:

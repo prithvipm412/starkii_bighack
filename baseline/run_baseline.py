@@ -4,11 +4,11 @@ refused = 1 if Llama Guard labels the (translated) user prompt "unsafe".
 judge_score = P(unsafe) vs P(safe) at Llama Guard's verdict token.
 latency_ms = translation + guard time for that prompt (batch size 1, so it is per-prompt latency).
 
-Preprocessing per variant (uses the variant label; the baseline is told the input language):
+Preprocessing per variant (IndicProcessor pre/post-processing around IndicTrans2):
   en      -> guard directly
-  kn      -> IndicTrans2 kan_Knda -> eng_Latn
-  kn_mix  -> IndicTrans2 kan_Knda -> eng_Latn (English technical terms pass through)
-  kn_latn -> ITRANS -> Kannada script (inverse of data_tools.transliterate), then as kn
+  kn      -> IndicTrans2 kan_Knda -> eng_Latn -> guard
+  kn_mix  -> IndicTrans2 kan_Knda -> eng_Latn -> guard (English technical terms pass through)
+  kn_latn -> guard UNTRANSLATED (Roman-script Kanglish; IndicTrans2 cannot translate it)
 
 Writes results/mac4/llama-guard-3-1b_baseline.csv (CLAUDE.md results format), appending after
 every prompt and resuming on restart. Translations and prompt text are never written to disk.
@@ -117,11 +117,6 @@ class Guard:
         return refused, round(score, 4)
 
 
-def to_kannada_script(text: str) -> str:
-    from indic_transliteration import sanscript
-    return sanscript.transliterate(text, sanscript.ITRANS, sanscript.KANNADA)
-
-
 def main():
     ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     ap.add_argument("--prompts", required=True)
@@ -147,7 +142,7 @@ def main():
     torch.manual_seed(0)
     try:
         guard = Guard(device)
-        translator = Translator(device) if any(r.get("variant", "en") != "en" for r in todo) else None
+        translator = Translator(device) if any(r.get("variant") in ("kn", "kn_mix") for r in todo) else None
     except Exception as e:
         sys.exit(f"ERROR: model load failed ({type(e).__name__}: {e}). Gated repo? run: hf auth login")
 
@@ -166,11 +161,9 @@ def main():
                 text = r["text"].strip()
                 if not text:
                     raise ValueError("empty text")
-                if variant == "kn_latn":
-                    text = translator(to_kannada_script(text))
-                elif variant in ("kn", "kn_mix"):
+                if variant in ("kn", "kn_mix"):
                     text = translator(text)
-                elif variant != "en":
+                elif variant not in ("en", "kn_latn"):  # kn_latn goes to the guard untranslated
                     raise ValueError(f"unknown variant {variant!r}")
                 refused, score = guard(text)
                 latency = round((time.perf_counter() - t0) * 1000)
