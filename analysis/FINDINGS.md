@@ -379,3 +379,42 @@ Detector = the prompt's projection on the model's **English-derived** refusal di
 - **Where it is weak:** the direction is computed from English prompts. In Kannada script, Kanglish and code-mix, harmful projections fall towards the harmless range, so AUROC drops and a single tau trades catch rate against false alarms (the harmless over-refusal seen under steer_gated). It is a cheap in-model signal (no extra model, no translation), not a replacement for the translated Llama Guard input check.
 - Catch / false-alarm here use projection > tau only; the deployed gate also requires a non-English detection, so it never fires on English (see gate_fire_* columns).
 <!-- projdet:end -->
+
+<!-- external:begin -->
+## External check: human-written Kannada (SurakshaEval)
+**Dataset:** SurakshaEval, Kannada split: 163 human-written prompts, all in the "Kannada-specific" risk area.
+- **Citation:** D. Banerjee et al., "SurakshaEval: An Indic Safety Benchmark for Multilingual LLMs", AAAI/ACM AIES 2026, 9(1):325–336; arXiv 2608.07862.
+- **Source:** Hugging Face `SurakshaAI/SurakshaEval` (gated; access granted to the vvijetha account).
+- **Licence:** CC BY-NC-SA 4.0 (non-commercial research use).
+- **Storage:** the data stays in `~/Desktop/datasets/`, outside the repo. `results/mac4/external_kannada_guard.csv` holds IDs, categories and scores only.
+
+**Method:**
+- `python -m analysis.external_kannada` runs **only the guard's input layer** (`guard/guard.py`, threshold 0.5, default `itrans` mode, no chatbot generation).
+- It runs on two views of each item: the human-written Kannada question, and the dataset's own English version (`en_paired`).
+- **Detected variants:** of the 163 human-written Kannada prompts, 162 were detected as kn and 1 as kn_mix; none as kn_latn, and the dataset has no romanized Kannada. All English versions were detected as en.
+
+**Caveat before reading the numbers:**
+- SurakshaEval has **no harmful/safe label per prompt.** Every item is a risk probe in a sensitive area, and the benchmark grades the chatbot's *reply*.
+- Many items are politically, culturally or legally sensitive questions that a good chatbot should answer carefully rather than refuse.
+- So "flagged %" measures how often the guard treats them as unsafe. It is **not** a catch rate on harmful requests.
+- There are no safe items, so there is no wrongly-blocked rate.
+
+| harm category | n | flagged %, human-written Kannada | flagged %, paired English |
+|---|---|---|---|
+| ALL | 163 | 6.1 [3.4–10.9] (10/163) | 4.9 [2.5–9.4] (8/163) |
+| Controversial events/topics | 37 | 13.5 [5.9–28.0] (5/37) | 2.7 [0.5–13.8] (1/37) |
+| Politically sensitive topics | 42 | 2.4 [0.4–12.3] (1/42) | 2.4 [0.4–12.3] (1/42) |
+| Societal and cultural concerns | 35 | 2.9 [0.5–14.5] (1/35) | 2.9 [0.5–14.5] (1/35) |
+| Regional and racial issues | 21 | 4.8 [0.8–22.7] (1/21) | 4.8 [0.8–22.7] (1/21) |
+| Legal and human rights matters | 15 | 6.7 [1.2–29.8] (1/15) | 13.3 [3.7–37.9] (2/15) |
+| Specific-individuals | 12 | 8.3 [1.5–35.4] (1/12) | 16.7 [4.7–44.8] (2/12) |
+| Adult Content | 1 | 0.0 [0.0–79.3] (0/1) | 0.0 [0.0–79.3] (0/1) |
+
+**Results:**
+- **Pairs:** the guard gives the same verdict on 157/163 pairs. 6 are flagged in both views, 4 only in Kannada, 2 only in English, and 151 in neither.
+- **No Kannada-vs-English gap for the guard itself on human-written text:** Kannada 6.1% vs English 4.9%, with overlapping CIs. The NLLB kn→en step did not hide risk relative to the authors' own English versions.
+- **The external number is much lower than our study's 90.3%** (harmful kn caught, input guard, machine-translated HarmBench/AdvBench). The likely reason is the type of prompt, not the language. Our prompts are explicit harmful requests. SurakshaEval's are mostly sensitive questions that Llama Guard 3's hazard taxonomy does not classify as unsafe, in English either.
+- **What this shows:** the guard is not a filter for regionally sensitive Kannada content. That needs a culture-aware policy (e.g. IndicGuard's Culture-Adaptive categories), not just translation.
+- **What this does not show:** whether the guard catches *harmful* requests written by humans in Kannada. A human-written, labelled harmful/safe Kannada set is still needed.
+- **Latency (median):** 445 ms for Kannada (incl. NLLB) and 109 ms for English.
+<!-- external:end -->
