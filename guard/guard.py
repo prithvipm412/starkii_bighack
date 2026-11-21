@@ -2,8 +2,8 @@
 
 Layers (check() runs them in order and returns the first block):
   1. input  : detect language -> translate to English -> Llama Guard 3 1B on the user prompt.
-              Identical to baseline/run_baseline.py (baseline + baseline_translit), so numbers match
-              results/mac4/llama-guard-3-1b_baseline*.csv.
+              Same as baseline/run_baseline.py (baseline + baseline_translit), so p_unsafe matches
+              results/mac4/llama-guard-3-1b_baseline*.csv; the English second view (below) can flip a 0.5-0.9 verdict.
   2. steer  : refusal-direction steering inside the chatbot model (pipeline/steer.py, steer_gated).
               It runs inside generation, not here; check() reports it as a pass-through layer.
   3. output : translate the reply if non-English -> Llama Guard on (prompt, reply), the same
@@ -18,6 +18,9 @@ Kanglish handling (kanglish=..., or env GUARD_KANGLISH):
               and word-level phonetic transliteration. Not validated against the study CSVs.
 Policy (policy=..., or env GUARD_POLICY): default off = Llama Guard's own category list.
   "tech" adds one sentence to S1 (technical computing language is not violence); baseline.run_baseline.POLICIES.
+Second view (second_view=..., or env GUARD_SECOND_VIEW=1/0), English input only:
+  p >= 0.9 -> block; 0.5 < p < 0.9 -> NLLB round trip en -> kn -> en, Llama Guard on that paraphrase,
+  block only if it is also > 0.5; p <= 0.5 -> allow. Non-English input is unchanged.
 Default threshold 0.5 = the study's judge (pipeline/score.py). See README for why 0.86 is not the default.
 """
 import os
@@ -32,6 +35,8 @@ from pipeline.data import is_romanized_indic, script_lang  # noqa: E402  (mac1's
 KANNADA_RE = re.compile(r"[ಀ-೿]")
 LATIN_WORD_RE = re.compile(r"[A-Za-z]{2,}")
 THRESHOLD = 0.5
+SECOND_VIEW_HIGH = 0.9
+SECOND_VIEW_DEFAULT = "1"
 
 
 def to_kannada_script(text: str) -> str:
@@ -59,8 +64,11 @@ def detect(text: str, kanglish: str = "itrans") -> str:
 
 
 class LanguageBarrierGuard:
-    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None, policy=None):
+    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None, policy=None, second_view=None):
         self.device = device
+        if second_view is None:
+            second_view = os.environ.get("GUARD_SECOND_VIEW", SECOND_VIEW_DEFAULT) not in ("0", "", "false", "off")
+        self.second_view = bool(second_view)
         self.policy = policy or os.environ.get("GUARD_POLICY") or None
         if self.policy == "default":
             self.policy = None
@@ -122,12 +130,19 @@ class LanguageBarrierGuard:
         t0 = time.perf_counter()
         text = (text or "").strip()
         if not text:
-            return {"blocked": False, "layer": "input", "p_unsafe": 0.0, "detected": "en",
+            return {"blocked": False, "layer": "input", "p_unsafe": 0.0, "p_second_view": None,
+                    "decided_by": "input", "detected": "en",
                     "latency_ms": 0, "note": "empty input"}
         detected = self.detect(text)
         english = self.to_english(text, detected)
         refused, p = self.guard(english)
-        return {"blocked": p > self.threshold, "layer": "input", "p_unsafe": p, "detected": detected,
+        blocked, p2, decided = p > self.threshold, None, "input"
+        if self.second_view and detected == "en" and self.threshold < p < SECOND_VIEW_HIGH:
+            kn = self.translator.translate(text, src="eng_Latn", tgt="kan_Knda")
+            _, p2 = self.guard(self.translator.translate(kn, src="kan_Knda", tgt="eng_Latn"))
+            blocked, decided = p2 > self.threshold, "input+second_view"
+        return {"blocked": blocked, "layer": "input", "p_unsafe": p, "p_second_view": p2,
+                "decided_by": decided, "detected": detected,
                 "kanglish_mode": self.kanglish, "policy": self.policy or "default",
                 "latency_ms": round((time.perf_counter() - t0) * 1000)}
 
@@ -171,5 +186,6 @@ class LanguageBarrierGuard:
             if o["blocked"]:
                 return {"verdict": "block", **o, "layers": layers}
         return {"verdict": "allow", "blocked": False, "layer": None, "detected": v["detected"],
-                "p_unsafe": v["p_unsafe"], "latency_ms": sum(l.get("latency_ms", 0) for l in layers),
+                "p_unsafe": v["p_unsafe"], "p_second_view": v["p_second_view"], "decided_by": v["decided_by"],
+                "latency_ms": sum(l.get("latency_ms", 0) for l in layers),
                 "layers": layers}

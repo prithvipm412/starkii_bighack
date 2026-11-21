@@ -104,9 +104,20 @@ class Translator:
         self.eng = self.tok.convert_tokens_to_ids("eng_Latn")
 
     def __call__(self, text: str) -> str:
-        enc = self.tok([text], truncation=True, max_length=256, return_tensors="pt").to(self.device)
+        return self.translate(text)
+
+    def translate(self, text: str, src: str = None, tgt: str = "eng_Latn") -> str:
+        """Same settings in any direction; default = the study's kan_Knda (or tok.src_lang) -> eng_Latn."""
+        prev = self.tok.src_lang
+        if src:
+            self.tok.src_lang = src
+        try:
+            enc = self.tok([text], truncation=True, max_length=256, return_tensors="pt").to(self.device)
+        finally:
+            self.tok.src_lang = prev
+        bos = self.eng if tgt == "eng_Latn" else self.tok.convert_tokens_to_ids(tgt)
         with self.torch.inference_mode():
-            gen = self.model.generate(**enc, forced_bos_token_id=self.eng, min_length=0, max_length=256,
+            gen = self.model.generate(**enc, forced_bos_token_id=bos, min_length=0, max_length=256,
                                       num_beams=1, do_sample=False, use_cache=True)
         return self.tok.batch_decode(gen.cpu(), skip_special_tokens=True)[0].strip()
 
