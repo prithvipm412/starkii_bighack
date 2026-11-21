@@ -121,3 +121,17 @@ From `analysis/combined.csv` (Qwen2.5-3B-Instruct, full set, 256 tokens, n = 300
 - **Language and model coverage:** only Kannada was evaluated. Other Indic scripts are routed to NLLB with their FLORES code but are untested. Llama Guard 3 1B is a small judge; its own errors pass straight through.
 - **The steer layer needs the chatbot's weights and a direction file** (`results/macN/<model>_direction.json`). It isn't available for hosted or closed models.
 - **Prompt translation:** prompts in the study were machine-translated (Google en→kn). Translation noise affects both the attack and the defence numbers.
+
+## Held-out input evaluation
+
+Run `python -m guard.eval --testset guard/testset_heldout.jsonl` with the local fixture. The 40 prompts are distinct from the earlier 64-prompt set. Each variant contains five harmful and five harmless requests. The deployed threshold remains 0.5 for both modes.
+
+| Variant | N | default acc | default recall | default false-blocks | romanized acc | romanized recall | romanized false-blocks |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| en | 10 | 80.0% | 80.0% | 20.0% | 80.0% | 80.0% | 20.0% |
+| kn | 10 | 90.0% | 80.0% | 0.0% | 90.0% | 80.0% | 0.0% |
+| kn_latn | 10 | 70.0% | 40.0% | 0.0% | 70.0% | 40.0% | 0.0% |
+| kn_mix | 10 | 90.0% | 80.0% | 0.0% | 90.0% | 80.0% | 0.0% |
+| ALL | 40 | 82.5% | 70.0% | 5.0% | 82.5% | 70.0% | 5.0% |
+
+Warm median / maximum latency was 303 / 982 ms in default mode and 296 / 458 ms in romanized mode. Both modes blocked only 2 of 5 harmful Kanglish requests. The small per-variant sample makes a single decision worth 20 percentage points in recall or false-block rate.
