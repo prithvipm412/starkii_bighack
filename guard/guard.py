@@ -21,6 +21,10 @@ Policy (policy=..., or env GUARD_POLICY): default off = Llama Guard's own catego
 Second view (second_view=..., or env GUARD_SECOND_VIEW=1/0), English input only:
   p >= 0.9 -> block; 0.5 < p < 0.9 -> NLLB round trip en -> kn -> en, Llama Guard on that paraphrase,
   block only if it is also > 0.5; p <= 0.5 -> allow. Non-English input is unchanged.
+  Translator for the en -> kn leg (second_view_translator=..., or env GUARD_SECOND_VIEW_TRANSLATOR):
+  "nllb" (default, offline) or "google" (optional, needs internet; the same endpoint and parameters as
+  analysis/build_google.py; only borderline English messages are sent). Google failure or > 3 s -> NLLB,
+  reported as "nllb (fallback)". The kn -> en leg is always NLLB.
 Default threshold 0.5 = the study's judge (pipeline/score.py). See README for why 0.86 is not the default.
 """
 import os
@@ -37,6 +41,23 @@ LATIN_WORD_RE = re.compile(r"[A-Za-z]{2,}")
 THRESHOLD = 0.5
 SECOND_VIEW_HIGH = 0.9
 SECOND_VIEW_DEFAULT = "1"
+GOOGLE_URL = "https://translate.googleapis.com/translate_a/single"  # = analysis/build_google.URL
+GOOGLE_TIMEOUT_S = 3.0
+
+
+def google_en_to_kn(text: str, timeout: float = GOOGLE_TIMEOUT_S) -> str:
+    """One try, same request as analysis/build_google.google; raises on error, timeout or empty output."""
+    import requests
+    t0 = time.perf_counter()
+    r = requests.get(GOOGLE_URL, params={"client": "gtx", "sl": "en", "tl": "kn", "dt": "t", "q": text},
+                     timeout=timeout)
+    r.raise_for_status()
+    out = "".join(seg[0] for seg in r.json()[0] if seg and seg[0])
+    if not out.strip():
+        raise RuntimeError("empty translation")
+    if time.perf_counter() - t0 > timeout:
+        raise TimeoutError("google translate slower than the time limit")
+    return out
 
 
 def to_kannada_script(text: str) -> str:
@@ -64,11 +85,16 @@ def detect(text: str, kanglish: str = "itrans") -> str:
 
 
 class LanguageBarrierGuard:
-    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None, policy=None, second_view=None):
+    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None, policy=None, second_view=None,
+                 second_view_translator=None):
         self.device = device
         if second_view is None:
             second_view = os.environ.get("GUARD_SECOND_VIEW", SECOND_VIEW_DEFAULT) not in ("0", "", "false", "off")
         self.second_view = bool(second_view)
+        self.second_view_translator = (second_view_translator
+                                       or os.environ.get("GUARD_SECOND_VIEW_TRANSLATOR", "nllb")).lower()
+        if self.second_view_translator not in ("nllb", "google"):
+            raise ValueError("second_view_translator must be 'nllb' or 'google'")
         self.policy = policy or os.environ.get("GUARD_POLICY") or None
         if self.policy == "default":
             self.policy = None
@@ -131,18 +157,26 @@ class LanguageBarrierGuard:
         text = (text or "").strip()
         if not text:
             return {"blocked": False, "layer": "input", "p_unsafe": 0.0, "p_second_view": None,
-                    "decided_by": "input", "detected": "en",
+                    "decided_by": "input", "second_view_translator": None, "detected": "en",
                     "latency_ms": 0, "note": "empty input"}
         detected = self.detect(text)
         english = self.to_english(text, detected)
         refused, p = self.guard(english)
-        blocked, p2, decided = p > self.threshold, None, "input"
+        blocked, p2, decided, sv_tr = p > self.threshold, None, "input", None
         if self.second_view and detected == "en" and self.threshold < p < SECOND_VIEW_HIGH:
-            kn = self.translator.translate(text, src="eng_Latn", tgt="kan_Knda")
+            kn = None
+            if self.second_view_translator == "google":
+                try:
+                    kn, sv_tr = google_en_to_kn(text), "google"
+                except Exception:  # offline, rate limited, slow, bad response: fall back, never crash
+                    kn = None
+            if kn is None:
+                kn = self.translator.translate(text, src="eng_Latn", tgt="kan_Knda")
+                sv_tr = "nllb" if self.second_view_translator == "nllb" else "nllb (fallback)"
             _, p2 = self.guard(self.translator.translate(kn, src="kan_Knda", tgt="eng_Latn"))
             blocked, decided = p2 > self.threshold, "input+second_view"
         return {"blocked": blocked, "layer": "input", "p_unsafe": p, "p_second_view": p2,
-                "decided_by": decided, "detected": detected,
+                "decided_by": decided, "second_view_translator": sv_tr, "detected": detected,
                 "kanglish_mode": self.kanglish, "policy": self.policy or "default",
                 "latency_ms": round((time.perf_counter() - t0) * 1000)}
 
@@ -187,5 +221,5 @@ class LanguageBarrierGuard:
                 return {"verdict": "block", **o, "layers": layers}
         return {"verdict": "allow", "blocked": False, "layer": None, "detected": v["detected"],
                 "p_unsafe": v["p_unsafe"], "p_second_view": v["p_second_view"], "decided_by": v["decided_by"],
-                "latency_ms": sum(l.get("latency_ms", 0) for l in layers),
+                "second_view_translator": v["second_view_translator"], "latency_ms": sum(l.get("latency_ms", 0) for l in layers),
                 "layers": layers}
