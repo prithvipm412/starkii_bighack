@@ -16,6 +16,8 @@ Kanglish handling (kanglish=..., or env GUARD_KANGLISH):
   "itrans"    (default) mac1's romanized-Indic detector + ITRANS -> Kannada, exactly as baseline_translit.
   "romanized" (optional, off by default) mac3's guard/romanized.py: broader informal-Kanglish detection
               and word-level phonetic transliteration. Not validated against the study CSVs.
+Policy (policy=..., or env GUARD_POLICY): default off = Llama Guard's own category list.
+  "tech" adds one sentence to S1 (technical computing language is not violence); baseline.run_baseline.POLICIES.
 Default threshold 0.5 = the study's judge (pipeline/score.py). See README for why 0.86 is not the default.
 """
 import os
@@ -57,8 +59,13 @@ def detect(text: str, kanglish: str = "itrans") -> str:
 
 
 class LanguageBarrierGuard:
-    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None):
+    def __init__(self, device=None, threshold=THRESHOLD, kanglish=None, policy=None):
         self.device = device
+        self.policy = policy or os.environ.get("GUARD_POLICY") or None
+        if self.policy == "default":
+            self.policy = None
+        if self.policy not in (None, "tech"):
+            raise ValueError("policy must be None/'default' or 'tech'")
         self.threshold = THRESHOLD if threshold is None else float(threshold)
         self.kanglish = kanglish or os.environ.get("GUARD_KANGLISH", "itrans")
         if self.kanglish not in ("itrans", "romanized"):
@@ -86,7 +93,7 @@ class LanguageBarrierGuard:
             import torch
             from baseline.run_baseline import Guard
             torch.manual_seed(0)
-            self._guard = Guard(self._dev())
+            self._guard = Guard(self._dev(), policy=self.policy)
         return self._guard
 
     def detect(self, text: str) -> str:
@@ -121,7 +128,7 @@ class LanguageBarrierGuard:
         english = self.to_english(text, detected)
         refused, p = self.guard(english)
         return {"blocked": p > self.threshold, "layer": "input", "p_unsafe": p, "detected": detected,
-                "kanglish_mode": self.kanglish,
+                "kanglish_mode": self.kanglish, "policy": self.policy or "default",
                 "latency_ms": round((time.perf_counter() - t0) * 1000)}
 
     def output_check(self, reply: str, prompt: str = "") -> dict:
@@ -133,7 +140,7 @@ class LanguageBarrierGuard:
         r_en = self.to_english(reply, r_det) if reply else "(empty)"
         conv = [{"role": "user", "content": [{"type": "text", "text": p_en or "(no prompt given)"}]},
                 {"role": "assistant", "content": [{"type": "text", "text": r_en}]}]
-        ids = g.tok.apply_chat_template(conv, return_tensors="pt").to(g.device)
+        ids = g.encode(conv)
         with g.torch.inference_mode():
             out = g.model.generate(ids, max_new_tokens=6, do_sample=False, pad_token_id=0,
                                    output_scores=True, return_dict_in_generate=True)
